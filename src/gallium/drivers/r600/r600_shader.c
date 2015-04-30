@@ -163,6 +163,9 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
     if (rctx->b.chip_class <= R700) {
 	    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_GEOMETRY);
     }
+    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_TESS_CTRL);
+    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_TESS_EVAL);
+
 	/* disable SB for shaders using CF_INDEX_0/1 (sampler/ubo array indexing) as it doesn't handle those currently */
 	use_sb &= !shader->shader.uses_index_registers;
 
