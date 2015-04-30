@@ -470,6 +470,8 @@ struct r600_context {
 	struct r600_shader_state	pixel_shader;
 	struct r600_shader_state	geometry_shader;
 	struct r600_shader_state	export_shader;
+	struct r600_shader_state	hull_shader;
+	struct r600_shader_state	local_shader;
 	struct r600_cs_shader_state	cs_shader_state;
 	struct r600_shader_stages_state shader_stages;
 	struct r600_gs_rings_state	gs_rings;

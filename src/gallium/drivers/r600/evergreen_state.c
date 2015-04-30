@@ -3505,6 +3505,8 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->pixel_shader.atom, id++, r600_emit_shader, 0);
 	r600_init_atom(rctx, &rctx->geometry_shader.atom, id++, r600_emit_shader, 0);
 	r600_init_atom(rctx, &rctx->export_shader.atom, id++, r600_emit_shader, 0);
+	r600_init_atom(rctx, &rctx->hull_shader.atom, id++, r600_emit_shader, 0);
+	r600_init_atom(rctx, &rctx->local_shader.atom, id++, r600_emit_shader, 0);
 	r600_init_atom(rctx, &rctx->shader_stages.atom, id++, evergreen_emit_shader_stages, 6);
 	r600_init_atom(rctx, &rctx->gs_rings.atom, id++, evergreen_emit_gs_rings, 26);
 
