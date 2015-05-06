@@ -174,7 +174,6 @@ get_conversion_operation(const glsl_type *to, const glsl_type *from,
       switch (from->base_type) {
       case GLSL_TYPE_INT: return ir_unop_i2f;
       case GLSL_TYPE_UINT: return ir_unop_u2f;
-      case GLSL_TYPE_DOUBLE: return ir_unop_d2f;
       default: return (ir_expression_operation)0;
       }
 
