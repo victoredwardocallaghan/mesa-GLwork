@@ -2305,7 +2305,16 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	pipeshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	convert_edgeflag_to_int(&ctx);
 
-	if (ring_outputs) {
+	if (ctx.type == TGSI_PROCESSOR_TESS_CTRL) {
+		struct r600_bytecode_gds gds;
+		for (i = 0, j = 0; i < noutput; i++, j++) {
+			memset(&gds, 0, sizeof(struct r600_bytecode_gds));
+			gds.src_gpr = shader->output[i].gpr;
+			gds.elem_size = 3;
+			gds.op = FETCH_OP_TF_WRITE;
+			r600_bytecode_add_gds(ctx.bc, &gds);
+		}
+	} else if (ring_outputs) {
 		if (key.vs.as_es)
 			emit_gs_ring_writes(&ctx, FALSE);
 	} else {
