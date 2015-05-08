@@ -2133,7 +2133,7 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	struct r600_shader_stages_state *state = (struct r600_shader_stages_state*)a;
 
-	uint32_t v = 0, v2 = 0, primid = 0;
+	uint32_t v = 0, v2 = 0, primid = 0, tf_param = 0;
 
 	if (rctx->vs_shader->current->shader.vs_as_gs_a) {
 		v2 = S_028A40_MODE(V_028A40_GS_SCENARIO_A);
@@ -2162,6 +2162,53 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 			primid = 1;
 	}
 
+	if (rctx->tes_shader) {
+		uint32_t type, partitioning, topology;
+		switch (rctx->tes_shader->current->shader.tes_prim_mode) {
+		case PIPE_PRIM_LINES:
+			type = V_028B6C_TESS_ISOLINE;
+			break;
+		case PIPE_PRIM_TRIANGLES:
+			type = V_028B6C_TESS_TRIANGLE;
+			break;
+		case PIPE_PRIM_QUADS:
+			type = V_028B6C_TESS_QUAD;
+			break;
+		default:
+			assert(0);
+			return;
+		}
+
+		switch (rctx->tes_shader->current->shader.tes_spacing) {
+		case PIPE_TESS_SPACING_FRACT_ODD:
+			partitioning = V_028B6C_PART_FRAC_ODD;
+			break;
+		case PIPE_TESS_SPACING_FRACT_EVEN:
+			partitioning = V_028B6C_PART_FRAC_EVEN;
+			break;
+		case PIPE_TESS_SPACING_EQUAL:
+			partitioning = V_028B6C_PART_INTEGER;
+			break;
+		default:
+			assert(0);
+			return;
+		}
+
+		if (rctx->tes_shader->current->shader.tes_point_mode)
+			topology = V_028B6C_OUTPUT_POINT;
+		else if (rctx->tes_shader->current->shader.tes_prim_mode == PIPE_PRIM_LINES)
+			topology = V_028B6C_OUTPUT_LINE;
+		else if (rctx->tes_shader->current->shader.tes_vertex_order_cw)
+			/* XXX follow radeonsi and invert */
+			topology = V_028B6C_OUTPUT_TRIANGLE_CCW;
+		else
+			topology = V_028B6C_OUTPUT_TRIANGLE_CW;
+
+		tf_param = S_028B6C_TYPE(type) |
+			S_028B6C_PARTITIONING(partitioning) |
+			S_028B6C_TOPOLOGY(topology);
+	}
+
 	if (rctx->tcs_shader) {
 		v |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
 		     S_028B54_HS_EN(1);
@@ -2174,6 +2221,7 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 	r600_write_context_reg(cs, R_028B54_VGT_SHADER_STAGES_EN, v);
 	r600_write_context_reg(cs, R_028A40_VGT_GS_MODE, v2);
 	r600_write_context_reg(cs, R_028A84_VGT_PRIMITIVEID_EN, primid);
+	r600_write_context_reg(cs, R_028B6C_VGT_TF_PARAM, tf_param);
 }
 
 static void evergreen_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)

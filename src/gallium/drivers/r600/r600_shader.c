@@ -2048,6 +2048,15 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			case TGSI_PROPERTY_TES_PRIM_MODE:
 				shader->tes_prim_mode = property->u[0].Data;
 				break;
+			case TGSI_PROPERTY_TES_SPACING:
+				shader->tes_spacing = property->u[0].Data;
+				break;
+			case TGSI_PROPERTY_TES_POINT_MODE:
+				shader->tes_point_mode = property->u[0].Data;
+				break;
+			case TGSI_PROPERTY_TES_VERTEX_ORDER_CW:
+				shader->tes_vertex_order_cw = property->u[0].Data;
+				break;
 			}
 			break;
 		default:

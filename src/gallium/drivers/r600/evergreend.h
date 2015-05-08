@@ -463,6 +463,37 @@
 #define R_0286EC_SPI_COMPUTE_NUM_THREAD_X            0x0286EC
 #define R_0286F0_SPI_COMPUTE_NUM_THREAD_Y            0x0286F0
 #define R_0286F4_SPI_COMPUTE_NUM_THREAD_Z            0x0286F4
+#define R_028B6C_VGT_TF_PARAM                        0x028B6C
+#define   S_028B6C_TYPE(x)                                            (((x) & 0x03) << 0)
+#define   G_028B6C_TYPE(x)                                            (((x) >> 0) & 0x03)
+#define   C_028B6C_TYPE                                               0xFFFFFFFC
+#define     V_028B6C_TESS_ISOLINE                                   0x00
+#define     V_028B6C_TESS_TRIANGLE                                  0x01
+#define     V_028B6C_TESS_QUAD                                      0x02
+#define   S_028B6C_PARTITIONING(x)                                    (((x) & 0x07) << 2)
+#define   G_028B6C_PARTITIONING(x)                                    (((x) >> 2) & 0x07)
+#define   C_028B6C_PARTITIONING                                       0xFFFFFFE3
+#define     V_028B6C_PART_INTEGER                                   0x00
+#define     V_028B6C_PART_POW2                                      0x01
+#define     V_028B6C_PART_FRAC_ODD                                  0x02
+#define     V_028B6C_PART_FRAC_EVEN                                 0x03
+#define   S_028B6C_TOPOLOGY(x)                                        (((x) & 0x07) << 5)
+#define   G_028B6C_TOPOLOGY(x)                                        (((x) >> 5) & 0x07)
+#define   C_028B6C_TOPOLOGY                                           0xFFFFFF1F
+#define     V_028B6C_OUTPUT_POINT                                   0x00
+#define     V_028B6C_OUTPUT_LINE                                    0x01
+#define     V_028B6C_OUTPUT_TRIANGLE_CW                             0x02
+#define     V_028B6C_OUTPUT_TRIANGLE_CCW                            0x03
+#define   S_028B6C_RESERVED_REDUC_AXIS(x)                             (((x) & 0x1) << 8) /* not on CIK */
+#define   G_028B6C_RESERVED_REDUC_AXIS(x)                             (((x) >> 8) & 0x1) /* not on CIK */
+#define   C_028B6C_RESERVED_REDUC_AXIS                                0xFFFFFEFF /* not on CIK */
+#define   S_028B6C_NUM_DS_WAVES_PER_SIMD(x)                           (((x) & 0x0F) << 10)
+#define   G_028B6C_NUM_DS_WAVES_PER_SIMD(x)                           (((x) >> 10) & 0x0F)
+#define   C_028B6C_NUM_DS_WAVES_PER_SIMD                              0xFFFFC3FF
+#define   S_028B6C_DISABLE_DONUTS(x)                                  (((x) & 0x1) << 14)
+#define   G_028B6C_DISABLE_DONUTS(x)                                  (((x) >> 14) & 0x1)
+#define   C_028B6C_DISABLE_DONUTS                                     0xFFFFBFFF
+
 #define R_028B74_VGT_DISPATCH_INITIATOR              0x028B74
 
 #define R_028800_DB_DEPTH_CONTROL                    0x028800

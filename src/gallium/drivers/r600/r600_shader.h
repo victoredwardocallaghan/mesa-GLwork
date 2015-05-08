@@ -96,7 +96,9 @@ struct r600_shader {
 	/* tess shader properties */
 	unsigned		tcs_vertices_out;
 	unsigned		tes_prim_mode;
-
+	unsigned		tes_point_mode;
+	unsigned		tes_spacing;
+	unsigned		tes_vertex_order_cw;
 	/* size in bytes of a data item in the ring (single vertex data) */
 	unsigned		ring_item_size;
 
