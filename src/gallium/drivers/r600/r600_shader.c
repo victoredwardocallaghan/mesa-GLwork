@@ -2308,9 +2308,14 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	if (ctx.type == TGSI_PROCESSOR_TESS_CTRL) {
 		struct r600_bytecode_gds gds;
 		for (i = 0, j = 0; i < noutput; i++, j++) {
+			if (shader->output[i].name != TGSI_SEMANTIC_TESSOUTER &&			    shader->output[i].name != TGSI_SEMANTIC_TESSINNER)
+				continue;
 			memset(&gds, 0, sizeof(struct r600_bytecode_gds));
 			gds.src_gpr = shader->output[i].gpr;
 			gds.elem_size = 3;
+			gds.src_sel_x = 0;
+			gds.src_sel_y = 1;
+			gds.src_sel_z = 2;
 			gds.op = FETCH_OP_TF_WRITE;
 			r600_bytecode_add_gds(ctx.bc, &gds);
 		}
