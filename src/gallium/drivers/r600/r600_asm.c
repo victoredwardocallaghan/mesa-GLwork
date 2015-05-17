@@ -43,9 +43,6 @@ static inline unsigned int r600_bytecode_get_num_operands(
 	return r600_isa_alu(alu->op)->src_count;
 }
 
-int r700_bytecode_alu_build(struct r600_bytecode *bc,
-		struct r600_bytecode_alu *alu, unsigned id);
-
 static struct r600_bytecode_cf *r600_bytecode_cf(void)
 {
 	struct r600_bytecode_cf *cf = CALLOC_STRUCT(r600_bytecode_cf);
@@ -1695,9 +1692,11 @@ int r600_bytecode_build(struct r600_bytecode *bc)
 					r = r600_bytecode_alu_build(bc, alu, addr);
 					break;
 				case R700:
-				case EVERGREEN: /* eg alu is same encoding as r700 */
-				case CAYMAN:
 					r = r700_bytecode_alu_build(bc, alu, addr);
+					break;
+				case EVERGREEN:
+				case CAYMAN:
+					r = eg_bytecode_alu_build(bc, alu, addr);
 					break;
 				default:
 					R600_ERR("unknown chip class %d.\n", bc->chip_class);
