@@ -164,7 +164,7 @@ static unsigned event_type_for_stream(struct r600_query *query)
 	switch (query->stream) {
 	default:
 	case 0: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS;
-	case 1: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS1;
+	case 1: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS1; /* enum values snarfed from SI kernel sid.h */
 	case 2: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS2;
 	case 3: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS3;
 	}
