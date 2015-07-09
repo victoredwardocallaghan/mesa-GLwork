@@ -1217,7 +1217,13 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 				rctx->clip_misc_state.clip_disable = rctx->gs_shader->current->shader.vs_position_window_space;
 				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
 			}
-			rctx->b.streamout.enabled_stream_buffers_mask = rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask;
+			/* Need to reapply R_028B98_VGT_STRMOUT_BUFFER_CONFIG streamout state, if any */
+			if (rctx->b.streamout.enabled_stream_buffers_mask !=
+				rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask) {
+				rctx->b.streamout.enabled_stream_buffers_mask =
+					rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask;
+				rctx->b.streamout.begin_atom.dirty = true;
+			}
 		}
 
 		r600_shader_select(ctx, rctx->vs_shader, &vs_dirty);

@@ -83,8 +83,9 @@ struct r600_shader {
 	unsigned		gs_output_prim;
 	unsigned		gs_max_out_vertices;
 	unsigned		gs_num_invocations;
-	/* size in bytes of a data item in the ring (single vertex data) */
-	unsigned		ring_item_size;
+	/* Size in bytes of a data item in the ring(s) (single vertex data).
+	   Stages with only one ring items 123 will be set to 0. */
+	unsigned		ring_item_sizes[4];
 
 	unsigned		indirect_files;
 	unsigned		max_arrays;
@@ -125,7 +126,7 @@ struct r600_pipe_shader {
 	struct r600_shader_key	key;
 	unsigned		db_shader_control;
 	unsigned		ps_depth_export;
-	unsigned		enabled_stream_buffers_mask;
+	unsigned		enabled_stream_buffers_mask; /* See r600_streamout.enabled_stream_buffers_mask */
 };
 
 /* return the table index 0-5 for TGSI_INTERPOLATE_LINEAR/PERSPECTIVE and
