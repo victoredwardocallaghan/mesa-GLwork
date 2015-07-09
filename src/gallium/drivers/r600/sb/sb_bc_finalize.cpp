@@ -761,8 +761,6 @@ void bc_finalizer::finalize_cf(cf_node* c) {
 			mask |= (1 << chan);
 		}
 
-		assert(reg >= 0 && mask);
-
 		if (reg >= 0)
 			update_ngpr(reg);
 
