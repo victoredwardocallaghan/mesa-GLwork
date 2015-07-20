@@ -191,15 +191,6 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 
 	r600_flush_vgt_streamout(rctx);
 
-	r600_write_context_reg(cs, rctx->chip_class >= EVERGREEN ?
-				       R_028B98_VGT_STRMOUT_BUFFER_CONFIG :
-				       R_028B20_VGT_STRMOUT_BUFFER_EN,
-			       (rctx->streamout.enabled_mask |
-					(rctx->streamout.enabled_mask << 4) |
-					(rctx->streamout.enabled_mask << 8) |
-					(rctx->streamout.enabled_mask << 12)) &
-					 rctx->streamout.enabled_stream_buffers_mask);
-
 	for (i = 0; i < rctx->streamout.num_targets; i++) {
 		if (!t[i])
 			continue;
@@ -347,6 +338,15 @@ static void r600_emit_streamout_enable(struct r600_common_context *rctx,
 	}
 	r600_write_context_reg(rctx->rings.gfx.cs, strmout_buffer_reg, strmout_buffer_val);
 	r600_write_context_reg(rctx->rings.gfx.cs, strmout_config_reg, strmout_config_val);
+
+	r600_write_context_reg(rctx->rings.gfx.cs, rctx->chip_class >= EVERGREEN ?
+			       R_028B98_VGT_STRMOUT_BUFFER_CONFIG :
+			       R_028B20_VGT_STRMOUT_BUFFER_EN,
+			       (rctx->streamout.enabled_mask |
+				(rctx->streamout.enabled_mask << 4) |
+				(rctx->streamout.enabled_mask << 8) |
+				(rctx->streamout.enabled_mask << 12)) &
+			       rctx->streamout.enabled_stream_buffers_mask);
 }
 
 static void r600_set_streamout_enable(struct r600_common_context *rctx, bool enable)
