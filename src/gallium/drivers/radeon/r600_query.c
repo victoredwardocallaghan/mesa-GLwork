@@ -290,45 +290,63 @@ static void r600_emit_query_predication(struct r600_common_context *ctx, struct 
 					int operation, bool flag_wait)
 {
 	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct r600_query_buffer *qbuf;
+	unsigned count;
+	uint32_t op = PRED_OP(operation);
 
-	if (operation == PREDICATION_OP_CLEAR) {
+	// if true then invert, see GL_ARB_conditional_render_inverted
+	if (ctx->current_render_cond_cond)
+		op |= PREDICATION_DRAW_NOT_VISIBLE; // Draw if not visable/overflow
+	else
+		op |= PREDICATION_DRAW_VISIBLE; // Draw if visable/overflow
+
+	switch (operation) {
+	case PREDICATION_OP_ZPASS: // query->type == PIPE_QUERY_OCCLUSION_PREDICATE
+		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
+		radeon_emit(cs, 0);
+		radeon_emit(cs, PRED_OP(PREDICATION_OP_ZPASS));
+		break;
+	case PREDICATION_OP_PRIMCOUNT: // query->type == PIPE_QUERY_SO_OVERFLOW_PREDICATE
+		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
+		radeon_emit(cs, 0);
+		radeon_emit(cs, PRED_OP(PREDICATION_OP_PRIMCOUNT));
+		break;
+	case PREDICATION_OP_CLEAR:
 		ctx->need_gfx_cs_space(&ctx->b, 3, FALSE);
 
 		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
 		radeon_emit(cs, 0);
 		radeon_emit(cs, PRED_OP(PREDICATION_OP_CLEAR));
-	} else {
-		struct r600_query_buffer *qbuf;
-		unsigned count;
-		uint32_t op;
+		return;
+	default:
+		break;
+	}
 
-		/* Find how many results there are. */
-		count = 0;
-		for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
-			count += qbuf->results_end / query->result_size;
-		}
+	/* Find how many results there are. */
+	count = 0;
+	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
+		count += qbuf->results_end / query->result_size;
+	}
 
-		ctx->need_gfx_cs_space(&ctx->b, 5 * count, TRUE);
+	ctx->need_gfx_cs_space(&ctx->b, 5 * count, TRUE);
 
-		op = PRED_OP(operation) | PREDICATION_DRAW_VISIBLE |
-				(flag_wait ? PREDICATION_HINT_WAIT : PREDICATION_HINT_NOWAIT_DRAW);
+	op |= flag_wait ? PREDICATION_HINT_WAIT : PREDICATION_HINT_NOWAIT_DRAW;
 
-		/* emit predicate packets for all data blocks */
-		for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
-			unsigned results_base = 0;
-			uint64_t va = qbuf->buf->gpu_address;
+	/* emit predicate packets for all data blocks */
+	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
+		unsigned results_base = 0;
+		uint64_t va = qbuf->buf->gpu_address;
 
-			while (results_base < qbuf->results_end) {
-				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
-				radeon_emit(cs, (va + results_base) & 0xFFFFFFFFUL);
-				radeon_emit(cs, op | (((va + results_base) >> 32UL) & 0xFF));
-				r600_emit_reloc(ctx, &ctx->rings.gfx, qbuf->buf, RADEON_USAGE_READ,
-						RADEON_PRIO_MIN);
-				results_base += query->result_size;
+		while (results_base < qbuf->results_end) {
+			radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
+			radeon_emit(cs, (va + results_base) & 0xFFFFFFFFUL);
+			radeon_emit(cs, op | (((va + results_base) >> 32UL) & 0xFF));
+			r600_emit_reloc(ctx, &ctx->rings.gfx, qbuf->buf, RADEON_USAGE_READ,
+					RADEON_PRIO_MIN);
+			results_base += query->result_size;
 
-				/* set CONTINUE bit for all packets except the first */
-				op |= PREDICATION_CONTINUE;
-			}
+			/* set CONTINUE bit for all packets except the first */
+			op |= PREDICATION_CONTINUE;
 		}
 	}
 }
@@ -776,6 +794,7 @@ static boolean r600_get_query_result(struct pipe_context *ctx,
 	return TRUE;
 }
 
+// XXX
 static void r600_render_condition(struct pipe_context *ctx,
 				  struct pipe_query *query,
 				  boolean condition,
