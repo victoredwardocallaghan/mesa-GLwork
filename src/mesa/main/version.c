@@ -329,6 +329,7 @@ compute_version(const struct gl_extensions *extensions,
                          extensions->ARB_internalformat_query &&
                          extensions->ARB_shader_atomic_counters &&
                          extensions->ARB_shader_image_load_store &&
+                         extensions->ARB_shader_texture_image_samples &&
                          extensions->ARB_shading_language_420pack &&
                          extensions->ARB_shading_language_packing &&
                          extensions->ARB_texture_compression_bptc &&
