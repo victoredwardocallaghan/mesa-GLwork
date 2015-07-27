@@ -2161,6 +2161,33 @@ _mesa_PatchParameterfv(GLenum pname, const GLfloat *values)
 }
 
 /**
+ * ARB_shader_texture_image_samples
+ */
+GLint GLAPIENTRY
+_mesa_TextureSamples(gsampler2DMS sampler)
+{
+	return -1;
+}
+
+GLint GLAPIENTRY
+_mesa_TextureSamples(gsampler2DMSArray sampler)
+{
+	return -1;
+}
+
+GLint GLAPIENTRY
+_mesa_ImageSamples(gsampler2DMS sampler)
+{
+	return -1;
+}
+
+GLint GLAPIENTRY
+_mesa_ImageSamples(gsampler2DMSArray sampler)
+{
+	return -1;
+}
+
+/**
  * ARB_shader_subroutine
  */
 GLint GLAPIENTRY
