@@ -305,6 +305,7 @@ struct r600_pipe_shader_selector {
 
 	struct tgsi_token       *tokens;
 	struct pipe_stream_output_info  so;
+	struct tgsi_shader_info		info;
 
 	unsigned	num_shaders;
 
@@ -966,4 +967,4 @@ static inline unsigned r600_conv_prim_to_gs_out(unsigned mode)
 	return prim_conv[mode];
 }
 
-#endif
+#endif /* R600_PIPE_H */

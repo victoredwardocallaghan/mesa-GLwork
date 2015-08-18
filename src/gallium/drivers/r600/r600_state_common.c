@@ -719,6 +719,17 @@ static inline union r600_shader_key r600_shader_selector_key(struct pipe_context
 		}
 		break;
 	}
+	case PIPE_SHADER_TESS_CTRL:
+		key.tcs.prim_mode =
+			rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+		break;
+	case PIPE_SHADER_TESS_EVAL:
+		if (rctx->gs_shader) {
+			key.tes.as_es = 1;
+			key.tes.es_enabled_outputs = rctx->gs_shader->inputs_read;
+		} else if (rctx->ps_shader && rctx->ps_shader->info.uses_primid)
+			key->tes.export_prim_id = 1;
+		break;
 	case PIPE_SHADER_GEOMETRY:
 		break;
 	case PIPE_SHADER_FRAGMENT: {
