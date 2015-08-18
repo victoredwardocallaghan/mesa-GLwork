@@ -1576,24 +1576,24 @@
 #define   G_028848_ALLOW_DOUBLE_DENORM_OUT(x)          (((x) >> 7) & 0x1)
 #define   C_028848_ALLOW_DOUBLE_DENORM_OUT             0xFFFFFF7F
 
-#define R_0288D4_SQ_PGM_RESOURCES_LS                 0x0288d4
-#define   S_0288D4_NUM_GPRS(x)                         (((x) & 0xFF) << 0)
-#define   G_0288D4_NUM_GPRS(x)                         (((x) >> 0) & 0xFF)
-#define   C_0288D4_NUM_GPRS                            0xFFFFFF00
-#define   S_0288D4_STACK_SIZE(x)                       (((x) & 0xFF) << 8)
-#define   G_0288D4_STACK_SIZE(x)                       (((x) >> 8) & 0xFF)
-#define   C_0288D4_STACK_SIZE                          0xFFFF00FF
-#define   S_0288D4_DX10_CLAMP(x)                       (((x) & 0x1) << 21)
-#define   G_0288D4_DX10_CLAMP(x)                       (((x) >> 21) & 0x1)
-#define   C_0288D4_DX10_CLAMP                          0xFFDFFFFF
-#define   S_0288D4_PRIME_CACHE_ON_DRAW(x)              (((x) & 0x1) << 23)
-#define   G_0288D4_PRIME_CACHE_ON_DRAW(x)              (((x) >> 23) & 0x1)
-#define   S_0288D4_UNCACHED_FIRST_INST(x)              (((x) & 0x1) << 28)
-#define   G_0288D4_UNCACHED_FIRST_INST(x)              (((x) >> 28) & 0x1)
-#define   C_0288D4_UNCACHED_FIRST_INST                 0xEFFFFFFF
-#define   S_0288D4_CLAMP_CONSTS(x)                     (((x) & 0x1) << 31)
-#define   G_0288D4_CLAMP_CONSTS(x)                     (((x) >> 31) & 0x1)
-#define   C_0288D4_CLAMP_CONSTS                        0x7FFFFFFF
+#define R_0288BC_SQ_PGM_RESOURCES_HS                 0x0288BC
+#define   S_0288BC_NUM_GPRS(x)                         (((x) & 0xFF) << 0)
+#define   G_0288BC_NUM_GPRS(x)                         (((x) >> 0) & 0xFF)
+#define   C_0288BC_NUM_GPRS                            0xFFFFFF00
+#define   S_0288BC_STACK_SIZE(x)                       (((x) & 0xFF) << 8)
+#define   G_0288BC_STACK_SIZE(x)                       (((x) >> 8) & 0xFF)
+#define   C_0288BC_STACK_SIZE                          0xFFFF00FF
+#define   S_0288BC_DX10_CLAMP(x)                       (((x) & 0x1) << 21)
+#define   G_0288BC_DX10_CLAMP(x)                       (((x) >> 21) & 0x1)
+#define   C_0288BC_DX10_CLAMP                          0xFFDFFFFF
+#define   S_0288BC_PRIME_CACHE_ON_DRAW(x)              (((x) & 0x1) << 23)
+#define   G_0288BC_PRIME_CACHE_ON_DRAW(x)              (((x) >> 23) & 0x1)
+#define   S_0288BC_UNCACHED_FIRST_INST(x)              (((x) & 0x1) << 28)
+#define   G_0288BC_UNCACHED_FIRST_INST(x)              (((x) >> 28) & 0x1)
+#define   C_0288BC_UNCACHED_FIRST_INST                 0xEFFFFFFF
+#define   S_0288BC_CLAMP_CONSTS(x)                     (((x) & 0x1) << 31)
+#define   G_0288BC_CLAMP_CONSTS(x)                     (((x) >> 31) & 0x1)
+#define   C_0288BC_CLAMP_CONSTS                        0x7FFFFFFF
 
 #define R_0288D8_SQ_PGM_RESOURCES_LS_2               0x0288d8
 
@@ -1967,7 +1967,8 @@
 #define R_028874_SQ_PGM_START_GS                     0x00028874
 #define R_02888C_SQ_PGM_START_ES                     0x0002888C
 #define R_0288A4_SQ_PGM_START_FS                     0x000288A4
-#define R_0288D0_SQ_PGM_START_LS                     0x000288d0
+#define R_0288B8_SQ_PGM_START_HS                     0x000288B8
+#define R_0288D0_SQ_PGM_START_LS                     0x000288D0
 #define R_0288A8_SQ_PGM_RESOURCES_FS                 0x000288A8
 #define R_0288EC_SQ_LDS_ALLOC_PS                     0x000288EC
 #define R_028900_SQ_ESGS_RING_ITEMSIZE               0x00028900

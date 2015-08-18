@@ -2162,6 +2162,15 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 			primid = 1;
 	}
 
+	if (rctx->tcs_shader) {
+		v |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
+		     S_028B54_HS_EN(1);
+		if (!state->geom_enable)
+			v |= S_028B54_VS_EN(V_028B54_VS_STAGE_DS);
+		else
+			v |= S_028B54_VS_EN(V_028B54_ES_STAGE_DS);
+	}
+
 	r600_write_context_reg(cs, R_028B54_VGT_SHADER_STAGES_EN, v);
 	r600_write_context_reg(cs, R_028A40_VGT_GS_MODE, v2);
 	r600_write_context_reg(cs, R_028A84_VGT_PRIMITIVEID_EN, primid);
