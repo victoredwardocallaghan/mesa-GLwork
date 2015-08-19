@@ -30,6 +30,16 @@
 extern "C" {
 #endif
 
+/* Valid shader configurations:
+ *
+ * API shaders       VS | TCS | TES | GS |pass| PS
+ * are compiled as:     |     |     |    |thru|
+ *                      |     |     |    |    |
+ * Only VS & PS:     VS | --  | --  | -- | -- | PS
+ * With GS:          ES | --  | --  | GS | VS | PS
+ * With Tessel.:     LS | HS  | VS  | -- | -- | PS
+ * With both:        LS | HS  | ES  | GS | VS | PS
+ */
 
 struct r600_shader_io {
 	unsigned		name;
@@ -82,6 +92,10 @@ struct r600_shader {
 	   Stages with only one ring items 123 will be set to 0. */
 	unsigned		ring_item_sizes[4];
 
+	/* tess shader properties */
+	unsigned		tcs_vertices_out;
+	unsigned		tes_prim_mode;
+
 	unsigned		indirect_files;
 	unsigned		max_arrays;
 	unsigned		num_arrays;
@@ -104,6 +118,17 @@ union r600_shader_key {
 		unsigned	as_es:1; /* export shader */
 		unsigned	as_gs_a:1;
 	} vs;
+	struct {
+		unsigned	prim_mode:3;
+	} tcs; /* tessellation control shader */
+	struct {
+		/* Mask of "get_unique_index" bits - which outputs are read
+		 * by the next stage (needed by ES).
+		 * This describes how outputs are laid out in memory. */
+		uint64_t	es_enabled_outputs;
+		unsigned	as_es:1; /* export shader */
+		unsigned	export_prim_id; /* when PS needs it and GS is disabled */
+	} tes; /* tessellation evaluation shader */
 };
 
 struct r600_shader_array {
