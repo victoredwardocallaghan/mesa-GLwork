@@ -1470,6 +1470,11 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		return;
 	}
 
+	if (!!rctx->tes_shader != (info->mode == PIPE_PRIM_PATCHES)) {
+		assert(0);
+		return;
+	}
+
 	/* make sure that the gfx ring is only one active */
 	if (rctx->b.rings.dma.cs && rctx->b.rings.dma.cs->cdw) {
 		rctx->b.rings.dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
