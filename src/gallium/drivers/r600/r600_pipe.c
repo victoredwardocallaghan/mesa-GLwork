@@ -341,7 +341,6 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_VERTEXID_NOBASE:
-	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
 		return 0;
 
@@ -402,6 +401,9 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_TEXEL_OFFSET:
 		return 7;
 
+	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
+		return 30;
+
 	case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
 		return PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_R600;
 	case PIPE_CAP_ENDIANNESS:
@@ -434,6 +436,8 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 	case PIPE_SHADER_COMPUTE:
 		break;
 	case PIPE_SHADER_GEOMETRY:
+	case PIPE_SHADER_TESS_CTRL:
+	case PIPE_SHADER_TESS_EVAL:
 		if (rscreen->b.family >= CHIP_CEDAR)
 			break;
 		/* pre-evergreen geom shaders need newer kernel */
@@ -441,7 +445,6 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 			break;
 		return 0;
 	default:
-		/* XXX: support tessellation on Evergreen */
 		return 0;
 	}
 
