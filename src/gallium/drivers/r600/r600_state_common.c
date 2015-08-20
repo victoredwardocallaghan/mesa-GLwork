@@ -2643,6 +2643,7 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.b.set_index_buffer = r600_set_index_buffer;
 	rctx->b.b.set_sampler_views = r600_set_sampler_views;
 	rctx->b.b.sampler_view_destroy = r600_sampler_view_destroy;
+	rctx->b.b.set_tess_state = r600_set_tess_state;
 	rctx->b.b.texture_barrier = r600_texture_barrier;
 	rctx->b.b.set_stream_output_targets = r600_set_streamout_targets;
 	rctx->b.b.draw_vbo = r600_draw_vbo;

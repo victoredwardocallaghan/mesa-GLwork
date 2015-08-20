@@ -76,6 +76,7 @@
  * we'd have to squash all use cases into one driver buffer.
  */
 #define R600_SAMPLE_POSITIONS_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
+#define R600_DRIVER_STATE_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
 
 #define R600_MAX_CONST_BUFFER_SIZE (4096 * sizeof(float[4]))
 
@@ -412,6 +413,7 @@ struct r600_context {
 	struct r600_screen		*screen;
 	struct blitter_context		*blitter;
 	struct u_suballocator		*allocator_fetch_shader;
+	struct r600_shader_selector	*fixed_func_tcs_shader;
 
 	/* Hardware info. */
 	boolean				has_vertex_cache;

@@ -79,6 +79,9 @@ static void r600_destroy_context(struct pipe_context *context)
 	if (rctx->dummy_pixel_shader) {
 		rctx->b.b.delete_fs_state(&rctx->b.b, rctx->dummy_pixel_shader);
 	}
+	if (sctx->fixed_func_tcs_shader) {
+		rctx->b.b.delete_tcs_state(&rctx->b.b, rctx->fixed_func_tcs_shader);
+	}
 	if (rctx->custom_dsa_flush) {
 		rctx->b.b.delete_depth_stencil_alpha_state(&rctx->b.b, rctx->custom_dsa_flush);
 	}

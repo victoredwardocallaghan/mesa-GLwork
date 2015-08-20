@@ -32,6 +32,7 @@
 #include "pipe/p_shader_tokens.h"
 #include "tgsi/tgsi_info.h"
 #include "tgsi/tgsi_parse.h"
+#include "tgsi/tgsi_ureg.h"
 #include "tgsi/tgsi_scan.h"
 #include "tgsi/tgsi_dump.h"
 #include "util/u_memory.h"
@@ -799,6 +800,40 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 		return -EINVAL;
 	}
 	return 0;
+}
+
+/**
+ * This is used when TCS is NULL in the VS->TCS->TES chain. In this case,
+ * VS passes its outputs to TES directly, so the fixed-function shader only
+ * has to write TESSOUTER and TESSINNER.
+ */
+static void r600_generate_fixed_func_tcs(struct r600_context *rctx)
+{
+	struct ureg_src const0, const1;
+	struct ureg_dst tessouter, tessinner;
+	struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
+
+	if (!ureg)
+		return; /* if we get here, we're screwed */
+
+	assert(!rctx->fixed_func_tcs_shader);
+
+	ureg_DECL_constant2D(ureg, 0, 1, R600_DRIVER_STATE_CONST_BUFFER);
+	const0 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 0),
+				    R600_DRIVER_STATE_CONST_BUFFER);
+	const1 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 1),
+				    R600_DRIVER_STATE_CONST_BUFFER);
+
+	tessouter = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSOUTER, 0);
+	tessinner = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSINNER, 0);
+
+	ureg_MOV(ureg, tessouter, const0);
+	ureg_MOV(ureg, tessinner, const1);
+	ureg_END(ureg);
+
+	sctx->fixed_func_tcs_shader =
+		ureg_create_shader_and_destroy(ureg, &rctx->b.b);
+	assert(rctx->fixed_func_tcs_shader);
 }
 
 static int r600_get_temp(struct r600_shader_ctx *ctx)

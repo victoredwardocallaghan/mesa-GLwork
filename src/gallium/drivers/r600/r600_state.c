@@ -766,6 +766,26 @@ static void r600_set_polygon_stipple(struct pipe_context *ctx,
 {
 }
 
+static void r600_set_tess_state(struct pipe_context *ctx,
+			        const float default_outer_level[4],
+			        const float default_inner_level[2])
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+	struct pipe_constant_buffer cb;
+	float array[8];
+
+	memcpy(array, default_outer_level, sizeof(float) * 4);
+	memcpy(array+4, default_inner_level, sizeof(float) * 2);
+
+	cb.buffer = NULL;
+	cb.user_buffer = NULL;
+	cb.buffer_size = sizeof(array);
+
+	ctx->set_constant_buffer(ctx, PIPE_SHADER_TESS_CTRL,
+				 R600_DRIVER_STATE_CONST_BUFFER, &cb);
+	pipe_resource_reference(&cb.buffer, NULL);
+}
+
 static void r600_emit_scissor_state(struct r600_context *rctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
