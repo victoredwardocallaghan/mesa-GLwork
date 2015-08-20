@@ -1578,6 +1578,19 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		return;
 	}
 
+	/* Set the rasterization primitive type.
+	 *
+	 * This must be done after si_decompress_textures, which can call
+	 * draw_vbo recursively, and before r600_update_shaders, which
+	 * uses current_rast_prim for this draw_vbo call. */
+	if (rctx->gs_shader)
+		rctx->current_rast_prim = rctx->gs_shader->gs_output_prim;
+	else if (rctx->tes_shader)
+		rctx->current_rast_prim =
+			rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+	else
+		rctx->current_rast_prim = info->mode;
+
 	if (info.indexed) {
 		/* Initialize the index buffer struct. */
 		pipe_resource_reference(&ib.buffer, rctx->index_buffer.buffer);
