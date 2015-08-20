@@ -1761,6 +1761,13 @@ static void r600_emit_constant_buffers(struct r600_context *rctx,
 	state->dirty_mask = 0;
 }
 
+static void r600_emit_tf_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
+{
+	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_TESS_CTRL], 160,
+				   R_028180_ALU_CONST_BUFFER_SIZE_VS_0,
+				   R_028980_ALU_CONST_CACHE_VS_0);
+}
+
 static void r600_emit_vs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
 	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX], 160,

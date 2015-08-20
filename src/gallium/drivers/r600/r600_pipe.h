@@ -222,6 +222,12 @@ struct r600_gs_rings_state {
 	struct pipe_constant_buffer gsvs_ring;
 };
 
+struct r600_tf_rings_state {
+	struct r600_atom atom;
+	unsigned enable;
+	struct pipe_constant_buffer tf_ring;
+};
+
 /* This must start from 16. */
 /* features */
 #define DBG_LLVM		(1 << 29)
@@ -468,6 +474,7 @@ struct r600_context {
 	struct r600_cs_shader_state	cs_shader_state;
 	struct r600_shader_stages_state shader_stages;
 	struct r600_gs_rings_state	gs_rings;
+	struct r600_tf_rings_state	tf_rings;
 	struct r600_constbuf_state	constbuf_state[PIPE_SHADER_TYPES];
 	struct r600_textures_info	samplers[PIPE_SHADER_TYPES];
 	/** Vertex buffers for fetch shaders */
