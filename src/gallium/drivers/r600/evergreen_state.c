@@ -2326,9 +2326,9 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_context_reg_seq(cb, R_028A10_VGT_OUTPUT_PATH_CNTL, 13);
 	r600_store_value(cb, 0); /* R_028A10_VGT_OUTPUT_PATH_CNTL */
 	r600_store_value(cb, 0); /* R_028A14_VGT_HOS_CNTL */
-	r600_store_value(cb, 0); /* R_028A18_VGT_HOS_MAX_TESS_LEVEL */
-	r600_store_value(cb, 0); /* R_028A1C_VGT_HOS_MIN_TESS_LEVEL */
-	r600_store_value(cb, 0); /* R_028A20_VGT_HOS_REUSE_DEPTH */
+	r600_store_value(cb, fui(64)); /* R_028A18_VGT_HOS_MAX_TESS_LEVEL */
+	r600_store_value(cb, fui(0)); /* R_028A1C_VGT_HOS_MIN_TESS_LEVEL */
+	r600_store_value(cb, 16); /* R_028A20_VGT_HOS_REUSE_DEPTH */
 	r600_store_value(cb, 0); /* R_028A24_VGT_GROUP_PRIM_TYPE */
 	r600_store_value(cb, 0); /* R_028A28_VGT_GROUP_FIRST_DECR */
 	r600_store_value(cb, 0); /* R_028A2C_VGT_GROUP_DECR */
