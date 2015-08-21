@@ -3603,3 +3603,38 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 
 	evergreen_init_compute_state_functions(rctx);
 }
+
+static unsigned evergreen_get_ls_hs_config(struct r600_context *rctx,
+					   const struct pipe_draw_info *info,
+					   unsigned num_patches)
+{
+	unsigned num_output_cp;
+
+	if (!rctx->tes_shader)
+		return 0;
+
+	num_output_cp = rctx->tcs_shader ?
+		rctx->tcs_shader->current->shader.tcs_vertices_out :
+		info->vertices_per_patch;
+// XXX use info.propertices instead of current->shader.tcs_vertices_out to carry state..
+#if 0
+	num_output_cp = rctx->tcs_shader ?
+		rctx->tcs_shader->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
+		info->vertices_per_patch;
+#endif
+
+	return S_028B58_NUM_PATCHES(num_patches) |
+		S_028B58_HS_NUM_INPUT_CP(info->vertices_per_patch) |
+		S_028B58_HS_NUM_OUTPUT_CP(num_output_cp);
+}
+
+void evergreen_emit_draw_registers(struct r600_context *rctx, const struct pipe_draw_info *info)
+{
+	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	uint32_t ls_hs_config = 0;
+	uint32_t num_patches = 0;
+
+	ls_hs_config = evergreen_get_ls_hs_config(rctx, info, num_patches);
+	/* get_ls_hs_config */
+	r600_write_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG, ls_hs_config);
+}

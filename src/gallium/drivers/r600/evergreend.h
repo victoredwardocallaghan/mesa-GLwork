@@ -2113,6 +2113,16 @@
 #define     V_028B54_VS_STAGE_REAL                   0x00
 #define     V_028B54_VS_STAGE_DS                     0x01
 #define     V_028B54_VS_STAGE_COPY_SHADER            0x02
+#define R_028B58_VGT_LS_HS_CONFIG		     0x00028B58
+#define   S_028B58_NUM_PATCHES(x)                                     (((x) & 0xFF) << 0)
+#define   G_028B58_NUM_PATCHES(x)                                     (((x) >> 0) & 0xFF)
+#define   C_028B58_NUM_PATCHES                                        0xFFFFFF00
+#define   S_028B58_HS_NUM_INPUT_CP(x)                                 (((x) & 0x3F) << 8)
+#define   G_028B58_HS_NUM_INPUT_CP(x)                                 (((x) >> 8) & 0x3F)
+#define   C_028B58_HS_NUM_INPUT_CP                                    0xFFFFC0FF
+#define   S_028B58_HS_NUM_OUTPUT_CP(x)                                (((x) & 0x3F) << 14)
+#define   G_028B58_HS_NUM_OUTPUT_CP(x)                                (((x) >> 14) & 0x3F)
+#define   C_028B58_HS_NUM_OUTPUT_CP                                   0xFFF03FFF
 #define R_028B70_DB_ALPHA_TO_MASK                    0x00028B70
 #define   S_028B70_ALPHA_TO_MASK_ENABLE(x)		(((x) & 0x1) << 0)
 #define   S_028B70_ALPHA_TO_MASK_OFFSET0(x)		(((x) & 0x3) << 8)

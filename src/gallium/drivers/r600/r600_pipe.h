@@ -57,7 +57,7 @@
 
 /* the number of CS dwords for flushing and drawing */
 #define R600_MAX_FLUSH_CS_DWORDS	16
-#define R600_MAX_DRAW_CS_DWORDS		47
+#define R600_MAX_DRAW_CS_DWORDS		47 // XXX where does this number come from???
 #define R600_TRACE_CS_DWORDS		7
 
 #define R600_MAX_USER_CONST_BUFFERS 13
@@ -709,7 +709,8 @@ void evergreen_dma_copy_buffer(struct r600_context *rctx,
 			       uint64_t dst_offset,
 			       uint64_t src_offset,
 			       uint64_t size);
-
+void evergreen_emit_draw_registers(struct r600_context *rctx,
+				   const struct pipe_draw_info *info);
 /* r600_state_common.c */
 void r600_init_common_state_functions(struct r600_context *rctx);
 void r600_emit_cso_state(struct r600_context *rctx, struct r600_atom *atom);

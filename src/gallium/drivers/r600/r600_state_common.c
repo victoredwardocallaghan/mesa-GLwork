@@ -1567,6 +1567,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		i = r600_next_dirty_atom(rctx, i + 1);
 	}
 
+	if (rctx->b.chip_class >= EVERGREEN)
+		evergreen_emit_draw_registers(rctx, &info);
+
 	if (rctx->b.chip_class == CAYMAN) {
 		/* Copied from radeonsi. */
 		unsigned primgroup_size = 128; /* recommended without a GS */
