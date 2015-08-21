@@ -898,8 +898,16 @@ static void r600_bind_gs_state(struct pipe_context *ctx, void *state)
 static void r600_bind_tcs_state(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
+	struct r600_shader_selector *sel = state;
+	bool enable_changed = !!rctx->tcs_shader != !!sel;
+
+	if (rctx->tcs_shader == sel)
+		return;
 
 	rctx->tcs_shader = (struct r600_pipe_shader_selector *)state;
+
+	if (enable_changed)
+		rctx->last_tcs = NULL; /* invalidate derived tess state */
 }
 
 static void r600_bind_tes_state(struct pipe_context *ctx, void *state)

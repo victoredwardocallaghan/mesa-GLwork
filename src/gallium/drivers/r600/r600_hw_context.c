@@ -359,6 +359,10 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	/* Re-emit the draw state. */
 	ctx->last_primitive_type = -1;
 	ctx->last_start_instance = -1;
+	ctx->last_ls = NULL;
+	ctx->last_tcs = NULL;
+	ctx->last_tes_sh_base = -1;
+	ctx->last_num_tcs_input_cp = -1;
 
 	ctx->b.initial_gfx_cs_size = ctx->b.rings.gfx.cs->cdw;
 }

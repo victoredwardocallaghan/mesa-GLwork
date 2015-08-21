@@ -497,6 +497,10 @@ struct r600_context {
 	/* Last draw state (-1 = unset). */
 	int				last_primitive_type; /* Last primitive type used in draw_vbo. */
 	int				last_start_instance;
+	struct r600_shader_state	*last_ls; /* local shader (VS) */
+	struct r600_shader_select	*last_tcs;
+	int				last_num_tcs_input_cp;
+	int				last_tes_sh_base;
 
 	void				*sb_context;
 	struct r600_isa		*isa;

@@ -2115,6 +2115,80 @@ static void cayman_emit_sample_mask(struct r600_context *rctx, struct r600_atom 
 	radeon_emit(cs, mask | (mask << 16)); /* X0Y1_X1Y1 */
 }
 
+/**
+ * This calculates the LDS size for tessellation shaders (VS, TCS, TES).
+ * LS.LDS_SIZE is shared by all 3 shader stages.
+ *
+ * The information about LDS and other non-compile-time parameters is then
+ * written to userdata SGPRs.
+ */
+static void evergreen_emit_derived_tess_state(struct r600_context *rctx,
+					      const struct pipe_draw_info *info,
+					      unsigned *num_patches)
+{
+	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct r600_shader_selector *ls = rctx->vs_shader;
+	/* The TES pointer will only be used for sctx->last_tcs.
+	 * It would be wrong to think that TCS = TES. */
+	struct r600_shader_selector *tcs =
+		rctx->tcs_shader ? rctx->tcs_shader : rctx->tes_shader;
+	unsigned tes_sh_base = rctx->shader_userdata.sh_base[PIPE_SHADER_TESS_EVAL];
+	unsigned num_tcs_input_cp = info->vertices_per_patch;
+	unsigned num_tcs_output_cp, num_tcs_inputs, num_tcs_outputs;
+	unsigned num_tcs_patch_outputs;
+	unsigned input_vertex_size, output_vertex_size, pervertex_output_patch_size;
+	unsigned input_patch_size, output_patch_size, output_patch0_offset;
+	unsigned perpatch_output_offset, lds_size, ls_rsrc2;
+	unsigned tcs_in_layout, tcs_out_layout, tcs_out_offsets;
+
+	*num_patches = 1; /* TODO: calculate this */
+
+	if (rctx->last_ls == ls->current &&
+	    rctx->last_tcs == tcs &&
+	    rctx->last_tes_sh_base == tes_sh_base &&
+	    rctx->last_num_tcs_input_cp == num_tcs_input_cp)
+		return;
+
+	rctx->last_ls = ls->current;
+	rctx->last_tcs = tcs;
+	rctx->last_tes_sh_base = tes_sh_base;
+	rctx->last_num_tcs_input_cp = num_tcs_input_cp;
+
+	/* This calculates how shader inputs and outputs among VS, TCS, and TES
+	 * are laid out in LDS. */
+	num_tcs_inputs = util_last_bit64(ls->outputs_written);
+
+	if (rctx->tcs_shader) {
+		num_tcs_outputs = util_last_bit64(tcs->outputs_written);
+		num_tcs_output_cp = tcs->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT];
+		num_tcs_patch_outputs = util_last_bit64(tcs->patch_outputs_written);
+	} else {
+		/* No TCS. Route varyings from LS to TES. */
+		num_tcs_outputs = num_tcs_inputs;
+		num_tcs_output_cp = num_tcs_input_cp;
+		num_tcs_patch_outputs = 2; /* TESSINNER + TESSOUTER */
+	}
+
+	input_vertex_size = num_tcs_inputs * 16;
+	output_vertex_size = num_tcs_outputs * 16;
+
+	input_patch_size = num_tcs_input_cp * input_vertex_size;
+
+	pervertex_output_patch_size = num_tcs_output_cp * output_vertex_size;
+	output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
+
+	output_patch0_offset = rctx->tcs_shader ? input_patch_size * *num_patches : 0;
+	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
+
+	lds_size = output_patch0_offset + output_patch_size * *num_patches;
+	ls_rsrc2 = ls->current->ls_rsrc2;
+
+	// XXX finish me..
+	//assert(lds_size <= 32768);
+	//ls_rsrc2 |= S_00B52C_LDS_SIZE(align(lds_size, 256) / 256);
+	// write to hw ?? radeon_emit(cs, ?)
+}
+
 static void evergreen_emit_vertex_fetch_shader(struct r600_context *rctx, struct r600_atom *a)
 {
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
@@ -3633,6 +3707,9 @@ void evergreen_emit_draw_registers(struct r600_context *rctx, const struct pipe_
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	uint32_t ls_hs_config = 0;
 	uint32_t num_patches = 0;
+
+	if (rctx->tes_shader)
+		evergreen_emit_derived_tess_state(rctx, info, &num_patches);
 
 	ls_hs_config = evergreen_get_ls_hs_config(rctx, info, num_patches);
 	/* get_ls_hs_config */
