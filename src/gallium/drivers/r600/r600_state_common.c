@@ -124,6 +124,48 @@ static unsigned r600_conv_pipe_prim(unsigned prim)
 	return prim_conv[prim];
 }
 
+/**
+ * Returns a unique index for a semantic name and index. The index must be
+ * less than 64, so that a 64-bit bitmask of used inputs or outputs can be
+ * calculated.
+ */
+unsigned r600_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
+{
+	switch (semantic_name) {
+	case TGSI_SEMANTIC_POSITION:
+		return 0;
+	case TGSI_SEMANTIC_PSIZE:
+		return 1;
+	case TGSI_SEMANTIC_CLIPDIST:
+		assert(index <= 1);
+		return 2 + index;
+	case TGSI_SEMANTIC_GENERIC:
+		if (index <= 63-4)
+			return 4 + index;
+		else
+			/* same explanation as in the default statement,
+			 * the only user hitting this is st/nine.
+			 */
+			return 0;
+
+	/* patch indices are completely separate and thus start from 0 */
+	case TGSI_SEMANTIC_TESSOUTER:
+		return 0;
+	case TGSI_SEMANTIC_TESSINNER:
+		return 1;
+	case TGSI_SEMANTIC_PATCH:
+		return 2 + index;
+
+	default:
+		/* Don't fail here. The result of this function is only used
+		 * for LS, TCS, TES, and GS, where legacy GL semantics can't
+		 * occur, but this function is called for all vertex shaders
+		 * before it's known whether LS will be compiled or not.
+		 */
+		return 0;
+	}
+}
+
 /* common state between evergreen and r600 */
 
 static void r600_bind_blend_state_internal(struct r600_context *rctx,
@@ -825,11 +867,60 @@ static void *r600_create_shader_state(struct pipe_context *ctx,
 			       const struct pipe_shader_state *state,
 			       unsigned pipe_shader_type)
 {
+	struct r600_screen *rscreen = (struct r600_screen *)ctx->screen;
 	struct r600_pipe_shader_selector *sel = CALLOC_STRUCT(r600_pipe_shader_selector);
+	int i;
 
 	sel->type = pipe_shader_type;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	sel->so = state->stream_output;
+	tgsi_scan_shader(state->tokens, &sel->info);
+	p_atomic_inc(&rscreen->b.num_shaders_created);
+
+	switch (pipe_shader_type) {
+	case PIPE_SHADER_GEOMETRY:
+		sel->gs_output_prim =
+			sel->info.properties[TGSI_PROPERTY_GS_OUTPUT_PRIM];
+		sel->gs_max_out_vertices =
+			sel->info.properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES];
+		sel->gs_num_invocations =
+			sel->info.properties[TGSI_PROPERTY_GS_INVOCATIONS];
+
+		for (i = 0; i < sel->info.num_inputs; i++) {
+			unsigned name = sel->info.input_semantic_name[i];
+			unsigned index = sel->info.input_semantic_index[i];
+
+			switch (name) {
+			case TGSI_SEMANTIC_PRIMID:
+				break;
+			default:
+				sel->inputs_read |=
+					1llu << r600_shader_io_get_unique_index(name, index);
+			}
+		}
+		break;
+
+	case PIPE_SHADER_VERTEX:
+	case PIPE_SHADER_TESS_CTRL:
+		for (i = 0; i < sel->info.num_outputs; i++) {
+			unsigned name = sel->info.output_semantic_name[i];
+			unsigned index = sel->info.output_semantic_index[i];
+
+			switch (name) {
+			case TGSI_SEMANTIC_TESSINNER:
+			case TGSI_SEMANTIC_TESSOUTER:
+			case TGSI_SEMANTIC_PATCH:
+				sel->patch_outputs_written |=
+					1llu << r600_shader_io_get_unique_index(name, index);
+				break;
+			default:
+				sel->outputs_written |=
+					1llu << r600_shader_io_get_unique_index(name, index);
+			}
+		}
+		break;
+	}
+
 	return sel;
 }
 
