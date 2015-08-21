@@ -210,6 +210,15 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 
 	/* Build state. */
 	switch (shader->shader.processor_type) {
+	case TGSI_PROCESSOR_TESS_CTRL:
+		evergreen_update_hs_state(ctx, shader);
+		break;
+	case TGSI_PROCESSOR_TESS_EVAL:
+		if (key.tes.as_es)
+			evergreen_update_es_state(ctx, shader);
+		else
+			evergreen_update_vs_state(ctx, shader);
+		break;
 	case TGSI_PROCESSOR_GEOMETRY:
 		if (rctx->b.chip_class >= EVERGREEN) {
 			evergreen_update_gs_state(ctx, shader);
@@ -221,7 +230,9 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 		break;
 	case TGSI_PROCESSOR_VERTEX:
 		if (rctx->b.chip_class >= EVERGREEN) {
-			if (export_shader)
+			if (key.vs.as_ls)
+				evergreen_update_ls_state(ctx, shader);
+			else if (key.vs.as_es)
 				evergreen_update_es_state(ctx, shader);
 			else
 				evergreen_update_vs_state(ctx, shader);
@@ -360,10 +371,13 @@ static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 		   case TGSI_FILE_CONSTANT:
 			   break;
 		   case TGSI_FILE_INPUT:
-			   if (ctx->type == TGSI_PROCESSOR_GEOMETRY)
+			   if (ctx->type == TGSI_PROCESSOR_GEOMETRY  ||
+			       ctx->type == TGSI_PROCESSOR_TESS_CTRL ||
+			       ctx->type == TGSI_PROCESSOR_TESS_EVAL)
 				   break;
 		   default:
-			   R600_ERR("unsupported src %d (dimension %d)\n", j,
+			   R600_ERR("unsupported src %d (file %d, dimension %d)\n", j,
+				    i->Src[j].Register.File,
 				    i->Src[j].Register.Dimension);
 			   return -EINVAL;
 		   }
@@ -371,6 +385,8 @@ static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 	}
 	for (j = 0; j < i->Instruction.NumDstRegs; j++) {
 		if (i->Dst[j].Register.Dimension) {
+			if (ctx->type == TGSI_PROCESSOR_TESS_CTRL)
+				continue;
 			R600_ERR("unsupported dst (dimension)\n");
 			return -EINVAL;
 		}
@@ -756,6 +772,8 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 		} else if (d->Semantic.Name == TGSI_SEMANTIC_VERTEXID)
 			break;
 		else if (d->Semantic.Name == TGSI_SEMANTIC_INVOCATIONID)
+			break;
+		else if (d->Semantic.Name == TGSI_SEMANTIC_TESSCOORD)
 			break;
 	default:
 		R600_ERR("unsupported file %d declaration\n", d->Declaration.File);
@@ -2021,6 +2039,12 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			case TGSI_PROPERTY_GS_INVOCATIONS:
 				shader->gs_num_invocations = property->u[0].Data;
 				break;
+			case TGSI_PROPERTY_TCS_VERTICES_OUT:
+				shader->tcs_vertices_out = property->u[0].Data;
+				break;
+			case TGSI_PROPERTY_TES_PRIM_MODE:
+				shader->tes_prim_mode = property->u[0].Data;
+				break;
 			}
 			break;
 		default:
@@ -2431,6 +2455,9 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					r = -EINVAL;
 					goto out_err;
 				}
+				break;
+			case TGSI_PROCESSOR_TESS_CTRL:
+			case TGSI_PROCESSOR_TESS_EVAL:
 				break;
 			default:
 				R600_ERR("unsupported processor type %d\n", ctx.type);
