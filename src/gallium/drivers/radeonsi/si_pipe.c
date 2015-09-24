@@ -431,11 +431,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_COMPUTE:
 		switch (param) {
 		case PIPE_SHADER_CAP_PREFERRED_IR:
-#if HAVE_LLVM < 0x0306
-			return PIPE_SHADER_IR_LLVM;
-#else
-			return PIPE_SHADER_IR_NATIVE;
-#endif
+			return (HAVE_LLVM < 0x0306 ? PIPE_SHADER_IR_LLVM : PIPE_SHADER_IR_NATIVE);
 		case PIPE_SHADER_CAP_DOUBLES:
 			return HAVE_LLVM >= 0x0307;
 
