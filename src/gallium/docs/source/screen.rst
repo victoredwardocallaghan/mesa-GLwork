@@ -281,6 +281,7 @@ The integer capabilities:
 * ``PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS``:
   Whether copying between compressed and plain formats is supported where
   a compressed block is copied to/from a plain pixel of the same size.
+* ``PIPE_CAP_SHADER_IMAGE_SIZE``: Whether ARB_shader_image_size is supported
 
 
 .. _pipe_capf:
