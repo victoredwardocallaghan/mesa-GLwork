@@ -162,6 +162,24 @@ components.
 perhaps, in very trivial cases.)
 </ul>
 
+<h3>Git Tips</h3>
+
+<ul>
+<li>Test for build breakage between patches e.g last 8 commits.
+<pre>
+    git rebase -i --exec="make -j4" HEAD~8
+</pre>
+<li>Sets the default mailing address for your repo.
+<pre>
+    git config --local sendemail.to mesa-dev@lists.freedesktop.org
+</pre>
+<li> Add version to subject line of patch series in this case for the last 8
+commits before sending.
+<pre>
+    git send-email --subject-prefix="PATCH v4" HEAD~8
+</pre>
+</ul>
+
 <h3>Patch formatting</h3>
 
 <p>
