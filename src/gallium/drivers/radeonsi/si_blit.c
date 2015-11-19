@@ -439,6 +439,15 @@ static void si_clear_depth_stencil(struct pipe_context *ctx,
 	si_blitter_end(ctx);
 }
 
+static void si_pipe_clear_texture(struct pipe_context *ctx,
+				  struct pipe_resource *res,
+				  unsigned level,
+				  const struct pipe_box *box,
+				  const void *data)
+{
+	util_surface_clear_texture(ctx, res, level, box, data);
+}
+
 /* Helper for decompressing a portion of a color or depth resource before
  * blitting if any decompression is needed.
  * The driver doesn't decompress resources automatically while u_blitter is
@@ -800,6 +809,7 @@ void si_init_blit_functions(struct si_context *sctx)
 	sctx->b.b.clear_buffer = si_pipe_clear_buffer;
 	sctx->b.b.clear_render_target = si_clear_render_target;
 	sctx->b.b.clear_depth_stencil = si_clear_depth_stencil;
+	sctx->b.b.clear_texture = si_pipe_clear_texture;
 	sctx->b.b.resource_copy_region = si_resource_copy_region;
 	sctx->b.b.blit = si_blit;
 	sctx->b.b.flush_resource = si_flush_resource;
