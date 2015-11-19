@@ -517,7 +517,7 @@ llvmpipe_transfer_map( struct pipe_context *pipe,
    const char *mode;
 
    assert(resource);
-   assert(level <= resource->last_level);
+//   assert(level <= resource->last_level);
 
    /*
     * Transfers, like other pipe operations, must happen in order, so flush the

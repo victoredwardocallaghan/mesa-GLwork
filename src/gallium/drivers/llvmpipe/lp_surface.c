@@ -141,7 +141,7 @@ llvmpipe_create_surface(struct pipe_context *pipe,
       ps->context = pipe;
       ps->format = surf_tmpl->format;
       if (llvmpipe_resource_is_texture(pt)) {
-         assert(surf_tmpl->u.tex.level <= pt->last_level);
+//         assert(surf_tmpl->u.tex.level <= pt->last_level);
          assert(surf_tmpl->u.tex.first_layer <= surf_tmpl->u.tex.last_layer);
          ps->width = u_minify(pt->width0, surf_tmpl->u.tex.level);
          ps->height = u_minify(pt->height0, surf_tmpl->u.tex.level);
