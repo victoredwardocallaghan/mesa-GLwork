@@ -800,6 +800,7 @@ void si_init_blit_functions(struct si_context *sctx)
 	sctx->b.b.clear_buffer = si_pipe_clear_buffer;
 	sctx->b.b.clear_render_target = si_clear_render_target;
 	sctx->b.b.clear_depth_stencil = si_clear_depth_stencil;
+	sctx->b.b.clear_texture = util_surface_clear_texture;
 	sctx->b.b.resource_copy_region = si_resource_copy_region;
 	sctx->b.b.blit = si_blit;
 	sctx->b.b.flush_resource = si_flush_resource;
