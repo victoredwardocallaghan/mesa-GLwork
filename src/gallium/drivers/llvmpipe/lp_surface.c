@@ -214,12 +214,22 @@ llvmpipe_clear_depth_stencil(struct pipe_context *pipe,
                             dstx, dsty, width, height);
 }
 
+static void llvmpipe_clear_texture(struct pipe_context *ctx,
+				   struct pipe_resource *res,
+				   unsigned level,
+				   const struct pipe_box *box,
+				   const void *data)
+{
+	util_surface_clear_texture(ctx, res, level, box, data);
+}
+
 
 void
 llvmpipe_init_surface_functions(struct llvmpipe_context *lp)
 {
    lp->pipe.clear_render_target = llvmpipe_clear_render_target;
    lp->pipe.clear_depth_stencil = llvmpipe_clear_depth_stencil;
+   lp->pipe.clear_texture = llvmpipe_clear_texture;
    lp->pipe.create_surface = llvmpipe_create_surface;
    lp->pipe.surface_destroy = llvmpipe_surface_destroy;
    /* These two are not actually functions dealing with surfaces */
