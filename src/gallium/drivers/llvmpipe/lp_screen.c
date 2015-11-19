@@ -404,6 +404,19 @@ llvmpipe_is_format_supported( struct pipe_screen *_screen,
    if (sample_count > 1)
       return FALSE;
 
+   switch (format) {
+	case PIPE_FORMAT_R8G8B8_SINT:
+	case PIPE_FORMAT_R8G8B8_UINT:
+	case PIPE_FORMAT_R16G16B16_SINT:
+	case PIPE_FORMAT_R16G16B16_UINT:
+	case PIPE_FORMAT_R32G32B32_SINT:
+	case PIPE_FORMAT_R32G32B32_UINT:
+	case PIPE_FORMAT_R32G32B32_FLOAT:
+		return FALSE;
+	default:
+		break;
+   }
+
    if (bind & PIPE_BIND_RENDER_TARGET) {
       if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB) {
          /* this is a lie actually other formats COULD exist where we would fail */
