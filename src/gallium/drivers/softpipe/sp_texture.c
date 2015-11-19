@@ -297,7 +297,7 @@ softpipe_create_surface(struct pipe_context *pipe,
       ps->context = pipe;
       ps->format = surf_tmpl->format;
       if (pt->target != PIPE_BUFFER) {
-         assert(surf_tmpl->u.tex.level <= pt->last_level);
+//         assert(surf_tmpl->u.tex.level <= pt->last_level);
          ps->width = u_minify(pt->width0, surf_tmpl->u.tex.level);
          ps->height = u_minify(pt->height0, surf_tmpl->u.tex.level);
          ps->u.tex.level = surf_tmpl->u.tex.level;
@@ -363,7 +363,7 @@ softpipe_transfer_map(struct pipe_context *pipe,
    uint8_t *map;
 
    assert(resource);
-   assert(level <= resource->last_level);
+//   assert(level <= resource->last_level);
 
    /* make sure the requested region is in the image bounds */
    assert(box->x + box->width <= (int) u_minify(resource->width0, level));
