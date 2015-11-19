@@ -128,6 +128,15 @@ softpipe_clear_depth_stencil(struct pipe_context *pipe,
                             dstx, dsty, width, height);
 }
 
+static void softpipe_clear_texture(struct pipe_context *ctx,
+				   struct pipe_resource *res,
+				   unsigned level,
+				   const struct pipe_box *box,
+				   const void *data)
+{
+	util_surface_clear_texture(ctx, res, level, box, data);
+}
+
 
 void
 sp_init_surface_functions(struct softpipe_context *sp)
@@ -135,6 +144,7 @@ sp_init_surface_functions(struct softpipe_context *sp)
    sp->pipe.resource_copy_region = util_resource_copy_region;
    sp->pipe.clear_render_target = softpipe_clear_render_target;
    sp->pipe.clear_depth_stencil = softpipe_clear_depth_stencil;
+   sp->pipe.clear_texture = softpipe_clear_texture;
    sp->pipe.blit = sp_blit;
    sp->pipe.flush_resource = sp_flush_resource;
 }
