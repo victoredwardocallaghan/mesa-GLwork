@@ -381,6 +381,7 @@ util_clear_render_target(struct pipe_context *pipe,
 
    if (dst_map) {
       enum pipe_format format = dst->format;
+      printf("dst_trans->stride = %i\n", dst_trans->stride);
       assert(dst_trans->stride > 0);
 
       if (util_format_is_pure_integer(format)) {

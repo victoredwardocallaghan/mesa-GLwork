@@ -417,7 +417,9 @@ softpipe_transfer_map(struct pipe_context *pipe,
    pt->level = level;
    pt->usage = usage;
    pt->box = *box;
-   pt->stride = spr->stride[level];
+   //pt->stride = spr->stride[level]; // XXX causes assert(dst_trans->stride >0) in util_clear_render_target() to fire??
+   pt->stride = util_format_get_nblocksx(resource->format, box->width)
+	      * util_format_get_blocksize(resource->format);
    pt->layer_stride = spr->img_stride[level];
 
    spt->offset = sp_get_tex_image_offset(spr, level, box->z);
