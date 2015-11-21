@@ -828,9 +828,13 @@ union pipe_query_result
 
 union pipe_color_union
 {
+   int i[4]; // ??
+   ubyte ub;
+   ushort us;
+   uint ui[4];
+   ushort h[4]; /* half float */
    float f[4];
-   int i[4];
-   unsigned int ui[4];
+   double d[4];
 };
 
 enum pipe_driver_query_type
