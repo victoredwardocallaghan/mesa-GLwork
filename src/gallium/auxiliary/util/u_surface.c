@@ -597,7 +597,7 @@ util_surface_clear_texture(struct pipe_context *pipe,
 
       switch (util_format_get_blocksizebits(res->format)) {
       case 128:
-         sf->format = PIPE_FORMAT_R32G32B32A32_UINT;
+//         sf->format = PIPE_FORMAT_R32G32B32A32_UINT;
          memcpy(&color.ui, data, 128 / 8);
          break;
       case 64:

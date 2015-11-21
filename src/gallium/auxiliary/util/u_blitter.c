@@ -740,10 +740,11 @@ static void blitter_set_clear_color(struct blitter_context_priv *ctx,
    if (color) {
       for (i = 0; i < 4; i++) {
          uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
-         uiverts[0] = color->ui[0];
-         uiverts[1] = color->ui[1];
-         uiverts[2] = color->ui[2];
-         uiverts[3] = color->ui[3];
+	 memcpy(uiverts, color, sizeof(union pipe_color_union));
+//         uiverts[0] = color->ui[0];
+//         uiverts[1] = color->ui[1];
+//         uiverts[2] = color->ui[2];
+//         uiverts[3] = color->ui[3];
       }
    } else {
       for (i = 0; i < 4; i++) {
@@ -1854,16 +1855,37 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
 
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
 
+   //union util_color uc; // XXX
+   const union pipe_color_union uc; // XXX
+   enum pipe_format format = dstsurf->format;
+   if (util_format_is_pure_integer(format)) {
+      /*
+       * We expect int/uint clear values here, though some APIs
+       * might disagree (but in any case util_pack_color()
+       * couldn't handle it)...
+       */
+      if (util_format_is_pure_sint(format)) {
+         util_format_write_4i(format, color->i, 0, &uc, 0, 0, 0, 1, 1);
+      }
+      else {
+         assert(util_format_is_pure_uint(format));
+         util_format_write_4ui(format, color->ui, 0, &uc, 0, 0, 0, 1, 1);
+      }
+   }
+   else {
+      util_pack_color(color->f, format, &uc);
+   }
+
    unsigned num_layers = util_framebuffer_get_num_layers(&fb_state);
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, FALSE, TRUE);
-      blitter_set_clear_color(ctx, color);
+      blitter_set_clear_color(ctx, &uc);
       blitter_draw(ctx, dstx, dsty, dstx+width, dsty+height, 0, num_layers);
    }
    else {
       blitter_set_common_draw_rect_state(ctx, FALSE, FALSE);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height, 0,
-                              UTIL_BLITTER_ATTRIB_COLOR, color);
+                              UTIL_BLITTER_ATTRIB_COLOR, &uc);
    }
 
    blitter_restore_vertex_states(ctx);
