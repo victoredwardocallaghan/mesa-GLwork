@@ -736,22 +736,56 @@ static void blitter_set_clear_color(struct blitter_context_priv *ctx,
                                     const union pipe_color_union *color)
 {
    int i;
+   struct pipe_context *pipe = ctx->base.pipe;
+   enum pipe_format format = pipe->format;
+   const union pipe_color_union uc;
 
-   if (color) {
-      for (i = 0; i < 4; i++) {
-         uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
-	 memcpy(uiverts, color, sizeof(union pipe_color_union));
-//         uiverts[0] = color->ui[0];
-//         uiverts[1] = color->ui[1];
-//         uiverts[2] = color->ui[2];
-//         uiverts[3] = color->ui[3];
-      }
-   } else {
+   if (!color) {
       for (i = 0; i < 4; i++) {
          ctx->vertices[i][1][0] = 0;
          ctx->vertices[i][1][1] = 0;
          ctx->vertices[i][1][2] = 0;
          ctx->vertices[i][1][3] = 0;
+      }
+      return;
+   }
+
+   if (util_format_is_pure_integer(format)) {
+      /*
+       * We expect int/uint clear values here, though some APIs
+       * might disagree (but in any case util_pack_color()
+       * couldn't handle it)...
+       */
+      if (util_format_is_pure_sint(format)) {
+         util_format_write_4i(format, color->i, 0, &uc, 0, 0, 0, 1, 1);
+         for (i = 0; i < 4; i++) {
+            uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
+            uiverts[0] = color->i[0];
+            uiverts[1] = color->i[1];
+            uiverts[2] = color->i[2];
+            uiverts[3] = color->i[3];
+         }
+      }
+      else {
+         assert(util_format_is_pure_uint(format));
+         util_format_write_4ui(format, color->ui, 0, &uc, 0, 0, 0, 1, 1);
+         for (i = 0; i < 4; i++) {
+            uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
+            uiverts[0] = color->ui[0];
+            uiverts[1] = color->ui[1];
+            uiverts[2] = color->ui[2];
+            uiverts[3] = color->ui[3];
+         }
+      }
+   }
+   else {
+      util_pack_color(color->f, format, &uc);
+      for (i = 0; i < 4; i++) {
+         uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
+         uiverts[0] = color->f[0];
+         uiverts[1] = color->f[1];
+         uiverts[2] = color->f[2];
+         uiverts[3] = color->f[3];
       }
    }
 }
@@ -1854,27 +1888,6 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
    pipe->set_sample_mask(pipe, ~0);
 
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
-
-   //union util_color uc; // XXX
-   const union pipe_color_union uc; // XXX
-   enum pipe_format format = dstsurf->format;
-   if (util_format_is_pure_integer(format)) {
-      /*
-       * We expect int/uint clear values here, though some APIs
-       * might disagree (but in any case util_pack_color()
-       * couldn't handle it)...
-       */
-      if (util_format_is_pure_sint(format)) {
-         util_format_write_4i(format, color->i, 0, &uc, 0, 0, 0, 1, 1);
-      }
-      else {
-         assert(util_format_is_pure_uint(format));
-         util_format_write_4ui(format, color->ui, 0, &uc, 0, 0, 0, 1, 1);
-      }
-   }
-   else {
-      util_pack_color(color->f, format, &uc);
-   }
 
    unsigned num_layers = util_framebuffer_get_num_layers(&fb_state);
    if (num_layers > 1 && ctx->has_layered) {
