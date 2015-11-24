@@ -2130,8 +2130,13 @@ assign_varying_locations(struct gl_context *ctx,
       reserved_varying_slot(producer, ir_var_shader_out) |
       reserved_varying_slot(consumer, ir_var_shader_in);
 
-   const unsigned slots_used = matches.assign_locations(prog, reserved_slots,
-                                                        prog->SeparateShader);
+   /* Add varyings with explicit locations to varyings with implicit locations
+    * to get the total number of slots used.
+    */
+   const unsigned slots_used =
+      matches.assign_locations(prog, reserved_slots, prog->SeparateShader) +
+      _mesa_bitcount_64(reserved_slots);
+
    matches.store_locations();
 
    for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
