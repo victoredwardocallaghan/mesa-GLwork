@@ -179,11 +179,13 @@ private:
    void bitwise_assign_unpack(ir_rvalue *lhs, ir_rvalue *rhs);
    unsigned lower_rvalue(ir_rvalue *rvalue, unsigned fine_location,
                          ir_variable *unpacked_var, const char *name,
-                         bool gs_input_toplevel, unsigned vertex_index);
+                         bool gs_input_toplevel, unsigned vertex_index,
+                         bool explicit_location);
    unsigned lower_arraylike(ir_rvalue *rvalue, unsigned array_size,
                             unsigned fine_location,
                             ir_variable *unpacked_var, const char *name,
-                            bool gs_input_toplevel, unsigned vertex_index);
+                            bool gs_input_toplevel, unsigned vertex_index,
+                            bool explicit_location);
    ir_dereference *get_packed_varying_deref(unsigned location,
                                             ir_variable *unpacked_var,
                                             const char *name,
@@ -298,7 +300,8 @@ lower_packed_varyings_visitor::run(struct gl_shader *shader)
 
       /* Recursively pack or unpack it. */
       this->lower_rvalue(deref, var->data.location * 4 + var->data.location_frac, var,
-                         var->name, this->gs_input_vertices != 0, 0);
+                         var->name, this->gs_input_vertices != 0, 0,
+                         var->data.explicit_location);
    }
 }
 
@@ -430,7 +433,8 @@ lower_packed_varyings_visitor::lower_rvalue(ir_rvalue *rvalue,
                                             ir_variable *unpacked_var,
                                             const char *name,
                                             bool gs_input_toplevel,
-                                            unsigned vertex_index)
+                                            unsigned vertex_index,
+                                            bool explicit_location)
 {
    unsigned dmul = rvalue->type->is_double() ? 2 : 1;
    /* When gs_input_toplevel is set, we should be looking at a geometry shader
@@ -449,7 +453,7 @@ lower_packed_varyings_visitor::lower_rvalue(ir_rvalue *rvalue,
             = ralloc_asprintf(this->mem_ctx, "%s.%s", name, field_name);
          fine_location = this->lower_rvalue(dereference_record, fine_location,
                                             unpacked_var, deref_name, false,
-                                            vertex_index);
+                                            vertex_index, explicit_location);
       }
       return fine_location;
    } else if (rvalue->type->is_array()) {
@@ -458,14 +462,15 @@ lower_packed_varyings_visitor::lower_rvalue(ir_rvalue *rvalue,
        */
       return this->lower_arraylike(rvalue, rvalue->type->array_size(),
                                    fine_location, unpacked_var, name,
-                                   gs_input_toplevel, vertex_index);
+                                   gs_input_toplevel, vertex_index,
+                                   explicit_location);
    } else if (rvalue->type->is_matrix()) {
       /* Matrices are packed/unpacked by considering each column vector in
        * sequence.
        */
       return this->lower_arraylike(rvalue, rvalue->type->matrix_columns,
                                    fine_location, unpacked_var, name,
-                                   false, vertex_index);
+                                   false, vertex_index, explicit_location);
    } else if (rvalue->type->vector_elements * dmul +
               fine_location % 4 > 4) {
       /* This vector is going to be "double parked" across two varying slots,
@@ -506,12 +511,13 @@ lower_packed_varyings_visitor::lower_rvalue(ir_rvalue *rvalue,
       if (left_components)
          fine_location = this->lower_rvalue(left_swizzle, fine_location,
                                             unpacked_var, left_name, false,
-                                            vertex_index);
+                                            vertex_index, explicit_location);
       else
          /* Top up the fine location to the next slot */
          fine_location++;
       return this->lower_rvalue(right_swizzle, fine_location, unpacked_var,
-                                right_name, false, vertex_index);
+                                right_name, false, vertex_index,
+                                explicit_location);
    } else {
       /* No special handling is necessary; pack the rvalue into the
        * varying.
@@ -532,7 +538,17 @@ lower_packed_varyings_visitor::lower_rvalue(ir_rvalue *rvalue,
       } else {
          this->bitwise_assign_unpack(rvalue, swizzle);
       }
-      return fine_location + components;
+
+      /* Explicitly packed components are packed by interleaving arrays, so
+       * simply bump the location by 4 to increment the location to the next
+       * element.
+       *
+       * Otherwise we pack arrays elements end to end.
+       */
+      if (explicit_location) {
+         return fine_location + 4;
+      } else
+         return fine_location + components;
    }
 }
 
@@ -558,7 +574,8 @@ lower_packed_varyings_visitor::lower_arraylike(ir_rvalue *rvalue,
                                                ir_variable *unpacked_var,
                                                const char *name,
                                                bool gs_input_toplevel,
-                                               unsigned vertex_index)
+                                               unsigned vertex_index,
+                                               bool explicit_location)
 {
    for (unsigned i = 0; i < array_size; i++) {
       if (i != 0)
@@ -572,14 +589,16 @@ lower_packed_varyings_visitor::lower_arraylike(ir_rvalue *rvalue,
           * are at the same location, but with a different vertex index.
           */
          (void) this->lower_rvalue(dereference_array, fine_location,
-                                   unpacked_var, name, false, i);
+                                   unpacked_var, name, false, i,
+                                   explicit_location);
       } else {
          char *subscripted_name
             = ralloc_asprintf(this->mem_ctx, "%s[%d]", name, i);
+
          fine_location =
             this->lower_rvalue(dereference_array, fine_location,
                                unpacked_var, subscripted_name,
-                               false, vertex_index);
+                               false, vertex_index, explicit_location);
       }
    }
    return fine_location;
