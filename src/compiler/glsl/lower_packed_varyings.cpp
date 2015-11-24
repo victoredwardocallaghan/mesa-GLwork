@@ -170,7 +170,8 @@ public:
                                  exec_list *out_instructions,
                                  exec_list *out_variables,
                                  bool disable_varying_packing,
-                                 bool xfb_enabled);
+                                 bool xfb_enabled,
+                                 bool has_enhanced_layouts);
 
    void run(struct gl_shader *shader);
 
@@ -237,6 +238,7 @@ private:
    exec_list *out_variables;
 
    bool disable_varying_packing;
+   bool has_enhanced_layouts;
    bool xfb_enabled;
 };
 
@@ -246,7 +248,7 @@ lower_packed_varyings_visitor::lower_packed_varyings_visitor(
       void *mem_ctx, unsigned locations_used, ir_variable_mode mode,
       unsigned gs_input_vertices, exec_list *out_instructions,
       exec_list *out_variables, bool disable_varying_packing,
-      bool xfb_enabled)
+      bool xfb_enabled, bool has_enhanced_layouts)
    : mem_ctx(mem_ctx),
      locations_used(locations_used),
      packed_varyings((ir_variable **)
@@ -257,7 +259,8 @@ lower_packed_varyings_visitor::lower_packed_varyings_visitor(
      out_instructions(out_instructions),
      out_variables(out_variables),
      disable_varying_packing(disable_varying_packing),
-     xfb_enabled(xfb_enabled)
+     xfb_enabled(xfb_enabled),
+     has_enhanced_layouts(has_enhanced_layouts)
 {
 }
 
@@ -677,11 +680,14 @@ lower_packed_varyings_visitor::get_packed_varying_deref(
 bool
 lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
 {
-   /* Things composed of vec4's and varyings with explicitly assigned
-    * locations don't need lowering.  Everything else does.
+   /* Don't lower varying with explicit location unless ARB_enhanced_layouts
+    * is enabled, also don't try to pack structs with explicit location as
+    * they don't support the component layout qualifier anyway.
     */
-   if (var->data.explicit_location)
+   if (var->data.explicit_location && (!has_enhanced_layouts ||
+       var->type->without_array()->is_record())) {
       return false;
+   }
 
    /* Override disable_varying_packing if the var is only used by transform
     * feedback. Also override it if transform feedback is enabled and the
@@ -690,11 +696,13 @@ lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
     */
    const glsl_type *type = var->type;
    if (disable_varying_packing && !var->data.is_xfb_only &&
+       !var->data.explicit_location &&
        !((type->is_array() || type->is_record() || type->is_matrix()) &&
          xfb_enabled))
       return false;
 
-   type = type->without_array();
+   /* Things composed of vec4's don't need lowering everything else does. */
+   type = var->type->without_array();
    if (type->vector_elements == 4 && !type->is_double())
       return false;
    return true;
@@ -748,7 +756,7 @@ void
 lower_packed_varyings(void *mem_ctx, unsigned locations_used,
                       ir_variable_mode mode, unsigned gs_input_vertices,
                       gl_shader *shader, bool disable_varying_packing,
-                      bool xfb_enabled)
+                      bool xfb_enabled, bool has_enhanced_layouts)
 {
    ir_function *main_func = shader->symbols->get_function("main");
    exec_list void_parameters;
@@ -766,7 +774,8 @@ lower_packed_varyings(void *mem_ctx, unsigned locations_used,
                                             &new_instructions,
                                             &new_variables,
                                             disable_varying_packing,
-                                            xfb_enabled);
+                                            xfb_enabled,
+                                            has_enhanced_layouts);
       visitor.run(shader);
       if (mode == ir_var_shader_out) {
          if (shader->Stage == MESA_SHADER_GEOMETRY) {

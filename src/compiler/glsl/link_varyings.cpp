@@ -2203,13 +2203,14 @@ assign_varying_locations(struct gl_context *ctx,
    if (producer) {
       lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
                             0, producer, disable_varying_packing,
-                            xfb_enabled);
+                            xfb_enabled, ctx->API == API_OPENGL_CORE);
    }
 
    if (consumer) {
       lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
                             consumer_vertices, consumer,
-                            disable_varying_packing, xfb_enabled);
+                            disable_varying_packing, xfb_enabled,
+                            ctx->API == API_OPENGL_CORE);
    }
 
    return true;
