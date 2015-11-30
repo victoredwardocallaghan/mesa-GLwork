@@ -1202,9 +1202,30 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 	pipe_resource_reference(&surface->base.texture, texture);
 	surface->base.context = pipe;
 	surface->base.format = templ->format;
-	surface->base.width = width;
-	surface->base.height = height;
-	surface->base.u = templ->u;
+
+	if (texture->target != PIPE_BUFFER) {
+		assert(templ->u.tex.level <= texture->last_level);
+		surface->base.width = u_minify(texture->width0, templ->u.tex.level);
+		surface->base.height = u_minify(texture->height0, templ->u.tex.level);
+		//surface->base.width = width; //
+		//surface->base.height = height; //
+		//surface->base.u = templ->u;
+		surface->base.u.tex.level = templ->u.tex.level;
+		surface->base.u.tex.first_layer = templ->u.tex.first_layer;
+		surface->base.u.tex.last_layer = templ->u.tex.last_layer;
+		if (surface->base.u.tex.first_layer != surface->base.u.tex.last_layer) {
+			debug_printf("creating surface with multiple layers, rendering to first layer only\n");
+		}
+	} else {
+		/* setting width as number of elements should get us correct renderbuffer width */
+		surface->base.width = templ->u.buf.last_element - templ->u.buf.first_element + 1;
+		surface->base.height = texture->height0;
+		surface->base.u.buf.first_element = templ->u.buf.first_element;
+		surface->base.u.buf.last_element = templ->u.buf.last_element;
+		assert(surface->base.u.buf.first_element <= surface->base.u.buf.last_element);
+		assert(surface->base.u.buf.last_element < surface->base.width);
+	}
+
 	return &surface->base;
 }
 

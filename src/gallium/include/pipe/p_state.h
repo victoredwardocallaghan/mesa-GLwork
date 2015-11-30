@@ -336,7 +336,7 @@ struct pipe_sampler_state
  * A view into a texture that can be bound to a color render target /
  * depth stencil attachment point.
  */
-struct pipe_surface
+struct pipe_surface // XXX
 {
    struct pipe_reference reference;
    struct pipe_resource *texture; /**< resource into which this is a view  */
@@ -434,7 +434,7 @@ struct pipe_box
 /**
  * A memory object/resource such as a vertex buffer or texture.
  */
-struct pipe_resource
+struct pipe_resource // XXX
 {
    struct pipe_reference reference;
    struct pipe_screen *screen; /**< screen that this texture belongs to */

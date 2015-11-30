@@ -527,7 +527,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 		if (blocksize == 8)
 			src_templ.format = PIPE_FORMAT_R16G16B16A16_UINT; /* 64-bit block */
 		else
-			src_templ.format = PIPE_FORMAT_R32G32B32A32_UINT; /* 128-bit block */
+			src_templ.format = PIPE_FORMAT_R32G32B32A32_UINT; /* 128-bit block */ // XXX ok..?
 		dst_templ.format = src_templ.format;
 
 		dst_width = util_format_get_nblocksx(dst->format, dst_width);
