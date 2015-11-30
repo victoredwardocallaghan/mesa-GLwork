@@ -733,11 +733,25 @@ static void blitter_set_rectangle(struct blitter_context_priv *ctx,
 }
 
 static void blitter_set_clear_color(struct blitter_context_priv *ctx,
+                                    const enum pipe_format format,
                                     const union pipe_color_union *color)
 {
    int i;
+   union util_color uc;
 
-   if (color) {
+   printf("%s: format=%i\n", __func__, format);
+
+   if (!color) {
+      for (i = 0; i < 4; i++) {
+         ctx->vertices[i][1][0] = 0;
+         ctx->vertices[i][1][1] = 0;
+         ctx->vertices[i][1][2] = 0;
+         ctx->vertices[i][1][3] = 0;
+      }
+      return;
+   }
+
+   if (format == PIPE_FORMAT_NONE) {
       for (i = 0; i < 4; i++) {
          uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
          uiverts[0] = color->ui[0];
@@ -745,12 +759,45 @@ static void blitter_set_clear_color(struct blitter_context_priv *ctx,
          uiverts[2] = color->ui[2];
          uiverts[3] = color->ui[3];
       }
-   } else {
+      return;
+   }
+
+   if (util_format_is_pure_integer(format)) {
+      /*
+       * We expect int/uint clear values here, though some APIs
+       * might disagree (but in any case util_pack_color()
+       * couldn't handle it)...
+       */
+      if (util_format_is_pure_sint(format)) {
+         util_format_write_4i(format, color->i, 0, &uc, 0, 0, 0, 1, 1);
+         for (i = 0; i < 4; i++) {
+            uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
+            uiverts[0] = color->i[0];
+            uiverts[1] = color->i[1];
+            uiverts[2] = color->i[2];
+            uiverts[3] = color->i[3];
+         }
+      }
+      else {
+         assert(util_format_is_pure_uint(format));
+         util_format_write_4ui(format, color->ui, 0, &uc, 0, 0, 0, 1, 1);
+         for (i = 0; i < 4; i++) {
+            uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
+            uiverts[0] = color->ui[0];
+            uiverts[1] = color->ui[1];
+            uiverts[2] = color->ui[2];
+            uiverts[3] = color->ui[3];
+         }
+      }
+   }
+   else {
+      util_pack_color(color->f, format, &uc);
       for (i = 0; i < 4; i++) {
-         ctx->vertices[i][1][0] = 0;
-         ctx->vertices[i][1][1] = 0;
-         ctx->vertices[i][1][2] = 0;
-         ctx->vertices[i][1][3] = 0;
+         uint32_t *uiverts = (uint32_t *)ctx->vertices[i][1];
+         uiverts[0] = color->f[0];
+         uiverts[1] = color->f[1];
+         uiverts[2] = color->f[2];
+         uiverts[3] = color->f[3];
       }
    }
 }
@@ -1209,10 +1256,11 @@ void util_blitter_draw_rectangle(struct blitter_context *blitter,
                                  const union pipe_color_union *attrib)
 {
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
+   const enum pipe_format format = PIPE_FORMAT_NONE; // FIXME draw_rectangle() API is poor
 
    switch (type) {
       case UTIL_BLITTER_ATTRIB_COLOR:
-         blitter_set_clear_color(ctx, attrib);
+         blitter_set_clear_color(ctx, format, attrib);
          break;
 
       case UTIL_BLITTER_ATTRIB_TEXCOORD:
@@ -1265,6 +1313,7 @@ static void util_blitter_clear_custom(struct blitter_context *blitter,
                                       unsigned num_layers,
                                       unsigned clear_buffers,
                                       const union pipe_color_union *color,
+                                      const enum pipe_format format,
                                       double depth, unsigned stencil,
                                       void *custom_blend, void *custom_dsa)
 {
@@ -1309,7 +1358,7 @@ static void util_blitter_clear_custom(struct blitter_context *blitter,
 
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, FALSE, TRUE);
-      blitter_set_clear_color(ctx, color);
+      blitter_set_clear_color(ctx, format, color);
       blitter_draw(ctx, 0, 0, width, height, depth, num_layers);
    }
    else {
@@ -1331,7 +1380,7 @@ void util_blitter_clear(struct blitter_context *blitter,
                         double depth, unsigned stencil)
 {
    util_blitter_clear_custom(blitter, width, height, num_layers,
-                             clear_buffers, color, depth, stencil,
+                             clear_buffers, color, PIPE_FORMAT_NONE, depth, stencil,
                              NULL, NULL);
 }
 
@@ -1340,7 +1389,7 @@ void util_blitter_custom_clear_depth(struct blitter_context *blitter,
                                      double depth, void *custom_dsa)
 {
     static const union pipe_color_union color;
-    util_blitter_clear_custom(blitter, width, height, 0, 0, &color, depth, 0,
+    util_blitter_clear_custom(blitter, width, height, 0, 0, &color, PIPE_FORMAT_NONE, depth, 0,
                               NULL, custom_dsa);
 }
 
@@ -1858,11 +1907,12 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
    num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, FALSE, TRUE);
-      blitter_set_clear_color(ctx, color);
+      blitter_set_clear_color(ctx, dstsurf->format, color);
       blitter_draw(ctx, dstx, dsty, dstx+width, dsty+height, 0, num_layers);
    }
    else {
       blitter_set_common_draw_rect_state(ctx, FALSE, FALSE);
+      blitter_set_clear_color(ctx, dstsurf->format, color);
       blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height, 0,
                               UTIL_BLITTER_ATTRIB_COLOR, color);
    }
