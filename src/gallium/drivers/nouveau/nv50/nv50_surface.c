@@ -447,8 +447,42 @@ nv50_clear_texture(struct pipe_context *pipe,
                    const void *data)
 {
    struct pipe_surface tmpl = {{0}}, *sf;
+   union pipe_color_union color;
+   float depth = 0;
+   uint8_t stencil = 0;
+   unsigned clear = 0;
 
-   tmpl.format = res->format;
+   switch (util_format_get_blocksizebits(res->format)) {
+   case 128:
+      tmpl.format = PIPE_FORMAT_R32G32B32A32_UINT;
+      memcpy(&color.ui, data, 128 / 8);
+      break;
+   case 64:
+      tmpl.format = PIPE_FORMAT_R32G32_UINT;
+      memcpy(&color.ui, data, 64 / 8);
+      memset(&color.ui[2], 0, 64 / 8);
+      break;
+   case 32:
+      tmpl.format = PIPE_FORMAT_R32_UINT;
+      memcpy(&color.ui, data, 32 / 8);
+      memset(&color.ui[1], 0, 96 / 8);
+      break;
+   case 16:
+      tmpl.format = PIPE_FORMAT_R16_UINT;
+      color.ui[0] = util_cpu_to_le32(
+         util_le16_to_cpu(*(unsigned short *)data));
+      memset(&color.ui[1], 0, 96 / 8);
+      break;
+   case 8:
+      tmpl.format = PIPE_FORMAT_R8_UINT;
+      color.ui[0] = util_cpu_to_le32(*(unsigned char *)data);
+      memset(&color.ui[1], 0, 96 / 8);
+      break;
+   default:
+      assert(!"Unknown texel element size");
+      return;
+   }
+
    tmpl.u.tex.first_layer = box->z;
    tmpl.u.tex.last_layer = box->z + box->depth - 1;
    tmpl.u.tex.level = level;
@@ -457,9 +491,6 @@ nv50_clear_texture(struct pipe_context *pipe,
       return;
 
    if (util_format_is_depth_or_stencil(res->format)) {
-      float depth = 0;
-      uint8_t stencil = 0;
-      unsigned clear = 0;
       const struct util_format_description *desc =
          util_format_description(res->format);
 
@@ -474,39 +505,6 @@ nv50_clear_texture(struct pipe_context *pipe,
       pipe->clear_depth_stencil(pipe, sf, clear, depth, stencil,
                                 box->x, box->y, box->width, box->height);
    } else {
-      union pipe_color_union color;
-
-      switch (util_format_get_blocksizebits(res->format)) {
-      case 128:
-         sf->format = PIPE_FORMAT_R32G32B32A32_UINT;
-         memcpy(&color.ui, data, 128 / 8);
-         break;
-      case 64:
-         sf->format = PIPE_FORMAT_R32G32_UINT;
-         memcpy(&color.ui, data, 64 / 8);
-         memset(&color.ui[2], 0, 64 / 8);
-         break;
-      case 32:
-         sf->format = PIPE_FORMAT_R32_UINT;
-         memcpy(&color.ui, data, 32 / 8);
-         memset(&color.ui[1], 0, 96 / 8);
-         break;
-      case 16:
-         sf->format = PIPE_FORMAT_R16_UINT;
-         color.ui[0] = util_cpu_to_le32(
-            util_le16_to_cpu(*(unsigned short *)data));
-         memset(&color.ui[1], 0, 96 / 8);
-         break;
-      case 8:
-         sf->format = PIPE_FORMAT_R8_UINT;
-         color.ui[0] = util_cpu_to_le32(*(unsigned char *)data);
-         memset(&color.ui[1], 0, 96 / 8);
-         break;
-      default:
-         assert(!"Unknown texel element size");
-         return;
-      }
-
       pipe->clear_render_target(pipe, sf, &color,
                                 box->x, box->y, box->width, box->height);
    }
