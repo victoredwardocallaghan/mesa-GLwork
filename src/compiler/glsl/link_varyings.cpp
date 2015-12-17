@@ -2226,6 +2226,23 @@ assign_varying_locations(struct gl_context *ctx,
    }
 
    if (consumer) {
+      if (consumer->Stage == MESA_SHADER_FRAGMENT) {
+         /* Since we only pack frag shader outputs with an explicit location
+          * we only need to count those outputs.
+          */
+         const uint64_t reserved_slots =
+            reserved_varying_slot(consumer, ir_var_shader_out,
+                                  FRAG_RESULT_DATA0);
+
+         /* Pack frag outputs with the component layout qualifier */
+         unsigned frag_outs = _mesa_bitcount_64(reserved_slots);
+         if (frag_outs > 0)
+            lower_packed_varyings(mem_ctx, frag_outs,
+                                  ir_var_shader_out, 0, consumer,
+                                  FRAG_RESULT_DATA0, true, xfb_enabled,
+                                  ctx->Extensions.ARB_enhanced_layouts);
+      }
+
       lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
                             consumer_vertices, consumer, VARYING_SLOT_VAR0,
                             disable_varying_packing, xfb_enabled,
