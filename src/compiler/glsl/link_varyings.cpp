@@ -2015,10 +2015,6 @@ assign_varying_locations(struct gl_context *ctx,
       NULL,
    };
 
-   unsigned consumer_vertices = 0;
-   if (consumer && consumer->Stage == MESA_SHADER_GEOMETRY)
-      consumer_vertices = prog->Geom.VerticesIn;
-
    /* Operate in a total of four passes.
     *
     * 1. Sort inputs / outputs into a canonical order.  This is necessary so
@@ -2214,15 +2210,14 @@ assign_varying_locations(struct gl_context *ctx,
          unsigned vertex_attributes = _mesa_bitcount_64(reserved_slots);
          if (vertex_attributes > 0)
             lower_packed_varyings(mem_ctx, vertex_attributes,
-                                  ir_var_shader_in, 0, producer,
+                                  ir_var_shader_in, producer,
                                   VERT_ATTRIB_GENERIC0, true, xfb_enabled,
                                   ctx->API == API_OPENGL_CORE);
       }
 
-      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
-                            0, producer, VARYING_SLOT_VAR0,
-                            disable_varying_packing, xfb_enabled,
-                            ctx->API == API_OPENGL_CORE);
+      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out, producer,
+                            VARYING_SLOT_VAR0, disable_varying_packing,
+                            xfb_enabled, ctx->API == API_OPENGL_CORE);
    }
 
    if (consumer) {
@@ -2237,16 +2232,14 @@ assign_varying_locations(struct gl_context *ctx,
          /* Pack frag outputs with the component layout qualifier */
          unsigned frag_outs = _mesa_bitcount_64(reserved_slots);
          if (frag_outs > 0)
-            lower_packed_varyings(mem_ctx, frag_outs,
-                                  ir_var_shader_out, 0, consumer,
-                                  FRAG_RESULT_DATA0, true, xfb_enabled,
-                                  ctx->Extensions.ARB_enhanced_layouts);
+            lower_packed_varyings(mem_ctx, frag_outs, ir_var_shader_out,
+                                  consumer, FRAG_RESULT_DATA0, true,
+                                  xfb_enabled, ctx->API == API_OPENGL_CORE);
       }
 
-      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
-                            consumer_vertices, consumer, VARYING_SLOT_VAR0,
-                            disable_varying_packing, xfb_enabled,
-                            ctx->API == API_OPENGL_CORE);
+      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in, consumer,
+                            VARYING_SLOT_VAR0, disable_varying_packing,
+                            xfb_enabled, ctx->API == API_OPENGL_CORE);
    }
 
    return true;
