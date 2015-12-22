@@ -4040,14 +4040,14 @@ build_program_resource_list(struct gl_context *ctx,
    if (input_stage == MESA_SHADER_STAGES && output_stage == 0)
       return;
 
-   /* Program interface needs to expose varyings in case of SSO. */
-   if (shProg->SeparateShader) {
-      if (!add_packed_varyings(shProg, input_stage, GL_PROGRAM_INPUT))
-         return;
-
-      if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
-         return;
-   }
+   /* Program interface needs to expose varyings in case of SSO, or in case of
+    * vertex inputs/fragment outputs that are packed using the component
+    * layout qualifier.
+    */
+   if (!add_packed_varyings(shProg, input_stage, GL_PROGRAM_INPUT))
+      return;
+   if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
+      return;
 
    if (!add_fragdata_arrays(shProg))
       return;
