@@ -152,6 +152,32 @@
 
 using namespace ir_builder;
 
+static bool
+needs_lowering(ir_variable *var, bool has_enhanced_layouts,
+               bool disable_varying_packing)
+{
+   /* Don't lower varying with explicit location unless ARB_enhanced_layouts
+    * is enabled, also don't try to pack structs with explicit location as
+    * they don't support the component layout qualifier anyway.
+    */
+   if (var->data.explicit_location && (!has_enhanced_layouts ||
+       var->type->without_array()->is_record())) {
+      return false;
+   }
+
+   /* Don't disable packing for explicit locations when ARB_enhanced_layouts
+    * is supported.
+    */
+   if (disable_varying_packing && !var->data.explicit_location)
+      return false;
+
+   /* Things composed of vec4's don't need lowering everything else does. */
+   const glsl_type *type = var->type->without_array();
+   if (type->vector_elements == 4 && !type->is_double())
+      return false;
+   return true;
+}
+
 namespace {
 
 /**
@@ -192,7 +218,6 @@ private:
                                             ir_variable *unpacked_var,
                                             const char *name,
                                             unsigned vertex_index);
-   bool needs_lowering(ir_variable *var);
 
    /**
     * Memory context used to allocate new instructions for the shader.
@@ -279,7 +304,7 @@ lower_packed_varyings_visitor::run(struct gl_shader *shader)
 
       if (var->data.mode != this->mode ||
           var->data.location < (int) this->base_location ||
-          !this->needs_lowering(var))
+          !needs_lowering(var, has_enhanced_layouts, disable_varying_packing))
          continue;
 
       /* This lowering pass is only capable of packing floats and ints
@@ -680,38 +705,6 @@ lower_packed_varyings_visitor::get_packed_varying_deref(
    }
    return deref;
 }
-
-bool
-lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
-{
-   /* Don't lower varying with explicit location unless ARB_enhanced_layouts
-    * is enabled, also don't try to pack structs with explicit location as
-    * they don't support the component layout qualifier anyway.
-    */
-   if (var->data.explicit_location && (!has_enhanced_layouts ||
-       var->type->without_array()->is_record())) {
-      return false;
-   }
-
-   /* Override disable_varying_packing if the var is only used by transform
-    * feedback. Also override it if transform feedback is enabled and the
-    * variable is an array, struct or matrix as the elements of these types
-    * will always has the same interpolation and therefore asre safe to pack.
-    */
-   const glsl_type *type = var->type;
-   if (disable_varying_packing && !var->data.is_xfb_only &&
-       !var->data.explicit_location &&
-       !((type->is_array() || type->is_record() || type->is_matrix()) &&
-         xfb_enabled))
-      return false;
-
-   /* Things composed of vec4's don't need lowering everything else does. */
-   type = var->type->without_array();
-   if (type->vector_elements == 4 && !type->is_double())
-      return false;
-   return true;
-}
-
 
 /**
  * Visitor that splices varying packing code before every use of EmitVertex()
