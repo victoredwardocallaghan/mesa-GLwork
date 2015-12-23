@@ -750,41 +750,48 @@ lower_packed_varyings(void *mem_ctx, unsigned locations_used,
                       gl_shader *shader, bool disable_varying_packing,
                       bool xfb_enabled)
 {
-   exec_list *instructions = shader->ir;
    ir_function *main_func = shader->symbols->get_function("main");
    exec_list void_parameters;
    ir_function_signature *main_func_sig
       = main_func->matching_signature(NULL, &void_parameters, false);
-   exec_list new_instructions, new_variables;
-   lower_packed_varyings_visitor visitor(mem_ctx, locations_used, mode,
-                                         gs_input_vertices,
-                                         &new_instructions,
-                                         &new_variables,
-                                         disable_varying_packing,
-                                         xfb_enabled);
-   visitor.run(shader);
-   if (mode == ir_var_shader_out) {
-      if (shader->Stage == MESA_SHADER_GEOMETRY) {
-         /* For geometry shaders, outputs need to be lowered before each call
-          * to EmitVertex()
-          */
-         lower_packed_varyings_gs_splicer splicer(mem_ctx, &new_instructions);
 
-         /* Add all the variables in first. */
-         main_func_sig->body.head->insert_before(&new_variables);
+   if (!(shader->Stage == MESA_SHADER_TESS_CTRL ||
+         (shader->Stage == MESA_SHADER_TESS_EVAL &&
+          mode == ir_var_shader_in))) {
+      exec_list *instructions = shader->ir;
+      exec_list new_instructions, new_variables;
 
-         /* Now update all the EmitVertex instances */
-         splicer.run(instructions);
+      lower_packed_varyings_visitor visitor(mem_ctx, locations_used, mode,
+                                            gs_input_vertices,
+                                            &new_instructions,
+                                            &new_variables,
+                                            disable_varying_packing,
+                                            xfb_enabled);
+      visitor.run(shader);
+      if (mode == ir_var_shader_out) {
+         if (shader->Stage == MESA_SHADER_GEOMETRY) {
+            /* For geometry shaders, outputs need to be lowered before each
+             * call to EmitVertex()
+             */
+            lower_packed_varyings_gs_splicer splicer(mem_ctx,
+                                                     &new_instructions);
+
+            /* Add all the variables in first. */
+            main_func_sig->body.head->insert_before(&new_variables);
+
+            /* Now update all the EmitVertex instances */
+            splicer.run(instructions);
+         } else {
+            /* For other shader types, outputs need to be lowered at the end
+             * of main()
+             */
+            main_func_sig->body.append_list(&new_variables);
+            main_func_sig->body.append_list(&new_instructions);
+         }
       } else {
-         /* For other shader types, outputs need to be lowered at the end of
-          * main()
-          */
-         main_func_sig->body.append_list(&new_variables);
-         main_func_sig->body.append_list(&new_instructions);
+         /* Shader inputs need to be lowered at the beginning of main() */
+         main_func_sig->body.head->insert_before(&new_instructions);
+         main_func_sig->body.head->insert_before(&new_variables);
       }
-   } else {
-      /* Shader inputs need to be lowered at the beginning of main() */
-      main_func_sig->body.head->insert_before(&new_instructions);
-      main_func_sig->body.head->insert_before(&new_variables);
    }
 }
