@@ -2222,15 +2222,16 @@ assign_varying_locations(struct gl_context *ctx,
          /* Pack vertex inputs with the component layout qualifier */
          unsigned vertex_attributes = _mesa_bitcount_64(reserved_slots);
          if (vertex_attributes > 0)
-            lower_packed_varyings(mem_ctx, vertex_attributes,
+            lower_packed_varyings(mem_ctx, prog, vertex_attributes,
                                   ir_var_shader_in, producer,
                                   VERT_ATTRIB_GENERIC0, true, xfb_enabled,
                                   ctx->API == API_OPENGL_CORE);
       }
 
-      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out, producer,
-                            VARYING_SLOT_VAR0, disable_varying_packing,
-                            xfb_enabled, ctx->API == API_OPENGL_CORE);
+      lower_packed_varyings(mem_ctx, prog, slots_used, ir_var_shader_out,
+                            producer, VARYING_SLOT_VAR0,
+                            disable_varying_packing, xfb_enabled,
+                            ctx->API == API_OPENGL_CORE);
    }
 
    if (consumer) {
@@ -2245,14 +2246,15 @@ assign_varying_locations(struct gl_context *ctx,
          /* Pack frag outputs with the component layout qualifier */
          unsigned frag_outs = _mesa_bitcount_64(reserved_slots);
          if (frag_outs > 0)
-            lower_packed_varyings(mem_ctx, frag_outs, ir_var_shader_out,
+            lower_packed_varyings(mem_ctx, prog, frag_outs, ir_var_shader_out,
                                   consumer, FRAG_RESULT_DATA0, true,
                                   xfb_enabled, ctx->API == API_OPENGL_CORE);
       }
 
-      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in, consumer,
-                            VARYING_SLOT_VAR0, disable_varying_packing,
-                            xfb_enabled, ctx->API == API_OPENGL_CORE);
+      lower_packed_varyings(mem_ctx, prog, slots_used, ir_var_shader_in,
+                            consumer, VARYING_SLOT_VAR0,
+                            disable_varying_packing, xfb_enabled,
+                            ctx->API == API_OPENGL_CORE);
    }
 
    return true;

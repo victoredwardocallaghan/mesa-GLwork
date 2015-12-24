@@ -122,7 +122,7 @@ void lower_output_reads(unsigned stage, exec_list *instructions);
 bool lower_packing_builtins(exec_list *instructions, int op_mask);
 void lower_shared_reference(struct gl_shader *shader, unsigned *shared_size);
 void lower_ubo_reference(struct gl_shader *shader);
-void lower_packed_varyings(void *mem_ctx,
+void lower_packed_varyings(void *mem_ctx, struct gl_shader_program *prog,
                            unsigned locations_used, ir_variable_mode mode,
                            gl_shader *shader, unsigned base_location,
                            bool disable_varying_packing, bool xfb_enabled,
