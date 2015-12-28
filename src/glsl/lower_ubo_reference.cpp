@@ -104,6 +104,7 @@ public:
 
    struct gl_shader *shader;
    struct gl_uniform_buffer_variable *ubo_var;
+   ir_variable *variable;
    ir_rvalue *uniform_block;
    bool progress;
 };
@@ -317,6 +318,7 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    this->buffer_access_type =
       var->is_in_shader_storage_block() ?
       ssbo_load_access : ubo_load_access;
+   this->variable = var;
 
    /* Compute the offset to the start if the dereference as well as other
     * information we need to configure the write
@@ -370,6 +372,13 @@ shader_storage_buffer_object(const _mesa_glsl_parse_state *state)
    return state->ARB_shader_storage_buffer_object_enable;
 }
 
+static uint32_t ssbo_access_params(const ir_variable *var)
+{
+   return (var->data.image_coherent << 0) |
+          (var->data.image_restrict << 1) |
+          (var->data.image_volatile << 2);
+}
+
 ir_call *
 lower_ubo_reference_visitor::ssbo_store(void *mem_ctx,
                                         ir_rvalue *deref,
@@ -394,6 +403,10 @@ lower_ubo_reference_visitor::ssbo_store(void *mem_ctx,
       ir_variable(glsl_type::uint_type, "write_mask" , ir_var_function_in);
    sig_params.push_tail(writemask_ref);
 
+   ir_variable *access_ref = new(mem_ctx)
+      ir_variable(glsl_type::uint_type, "access" , ir_var_function_in);
+   sig_params.push_tail(access_ref);
+
    ir_function_signature *sig = new(mem_ctx)
       ir_function_signature(glsl_type::void_type, shader_storage_buffer_object);
    assert(sig);
@@ -408,6 +421,7 @@ lower_ubo_reference_visitor::ssbo_store(void *mem_ctx,
    call_params.push_tail(offset->clone(mem_ctx, NULL));
    call_params.push_tail(deref->clone(mem_ctx, NULL));
    call_params.push_tail(new(mem_ctx) ir_constant(write_mask));
+   call_params.push_tail(new(mem_ctx) ir_constant(ssbo_access_params(variable)));
    return new(mem_ctx) ir_call(sig, NULL, &call_params);
 }
 
@@ -425,6 +439,10 @@ lower_ubo_reference_visitor::ssbo_load(void *mem_ctx,
    ir_variable *offset_ref = new(mem_ctx)
       ir_variable(glsl_type::uint_type, "offset_ref" , ir_var_function_in);
    sig_params.push_tail(offset_ref);
+
+   ir_variable *access_ref = new(mem_ctx)
+      ir_variable(glsl_type::uint_type, "access" , ir_var_function_in);
+   sig_params.push_tail(access_ref);
 
    ir_function_signature *sig =
       new(mem_ctx) ir_function_signature(type, shader_storage_buffer_object);
@@ -444,6 +462,7 @@ lower_ubo_reference_visitor::ssbo_load(void *mem_ctx,
    exec_list call_params;
    call_params.push_tail(this->uniform_block->clone(mem_ctx, NULL));
    call_params.push_tail(offset->clone(mem_ctx, NULL));
+   call_params.push_tail(new(mem_ctx) ir_constant(ssbo_access_params(variable)));
 
    return new(mem_ctx) ir_call(sig, deref_result, &call_params);
 }
@@ -499,6 +518,7 @@ lower_ubo_reference_visitor::write_to_memory(void *mem_ctx,
    unsigned packing = var->get_interface_type()->interface_packing;
 
    this->buffer_access_type = ssbo_store_access;
+   this->variable = var;
 
    /* Compute the offset to the start if the dereference as well as other
     * information we need to configure the write
@@ -678,6 +698,7 @@ lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalu
    int unsized_array_stride = calculate_unsized_array_stride(deref, packing);
 
    this->buffer_access_type = ssbo_unsized_array_length_access;
+   this->variable = var;
 
    /* Compute the offset to the start if the dereference as well as other
     * information we need to calculate the length.
@@ -910,6 +931,7 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
    unsigned packing = var->get_interface_type()->interface_packing;
 
    this->buffer_access_type = ssbo_atomic_access;
+   this->variable = var;
 
    setup_for_load_or_store(mem_ctx, var, deref,
                            &offset, &const_offset,
