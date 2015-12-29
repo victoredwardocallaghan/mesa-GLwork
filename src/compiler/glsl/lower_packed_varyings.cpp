@@ -178,6 +178,31 @@ needs_lowering(ir_variable *var, bool has_enhanced_layouts,
    return true;
 }
 
+static ir_variable *
+create_packed_var(void * const mem_ctx, const char *packed_name,
+                  const glsl_type *packed_type, ir_variable *unpacked_var,
+                  ir_variable_mode mode, unsigned location,
+                  bool is_outer_array_vert_idx)
+{
+   ir_variable *packed_var = new(mem_ctx)
+      ir_variable(packed_type, packed_name, mode);
+   if (is_outer_array_vert_idx) {
+      /* Prevent update_array_sizes() from messing with the size of the
+       * array.
+       */
+      packed_var->data.max_array_access = unpacked_var->type->length - 1;
+   }
+   packed_var->data.centroid = unpacked_var->data.centroid;
+   packed_var->data.sample = unpacked_var->data.sample;
+   packed_var->data.patch = unpacked_var->data.patch;
+   packed_var->data.interpolation = unpacked_var->data.interpolation;
+   packed_var->data.location = location;
+   packed_var->data.precision = unpacked_var->data.precision;
+   packed_var->data.always_active_io = unpacked_var->data.always_active_io;
+
+   return packed_var;
+}
+
 namespace {
 
 /**
@@ -667,21 +692,11 @@ lower_packed_varyings_visitor::get_packed_varying_deref(
             glsl_type::get_array_instance(packed_type,
                                           unpacked_var->type->length);
       }
-      ir_variable *packed_var = new(this->mem_ctx)
-         ir_variable(packed_type, packed_name, this->mode);
-      if (this->is_outer_array_vert_idx) {
-         /* Prevent update_array_sizes() from messing with the size of the
-          * array.
-          */
-         packed_var->data.max_array_access = unpacked_var->type->length - 1;
-      }
-      packed_var->data.centroid = unpacked_var->data.centroid;
-      packed_var->data.sample = unpacked_var->data.sample;
-      packed_var->data.patch = unpacked_var->data.patch;
-      packed_var->data.interpolation = unpacked_var->data.interpolation;
-      packed_var->data.location = location;
-      packed_var->data.precision = unpacked_var->data.precision;
-      packed_var->data.always_active_io = unpacked_var->data.always_active_io;
+
+      ir_variable *packed_var =
+         create_packed_var(mem_ctx, packed_name, packed_type, unpacked_var,
+                           this->mode, location,
+                           this->is_outer_array_vert_idx);
       unpacked_var->insert_before(packed_var);
       this->packed_varyings[slot] = packed_var;
    } else {
