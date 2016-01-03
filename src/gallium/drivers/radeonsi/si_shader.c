@@ -3717,6 +3717,20 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 	}
 }
 
+static void preload_shader_buffers(struct si_shader_context *si_shader_ctx)
+{
+	struct lp_build_tgsi_context * bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
+	struct gallivm_state * gallivm = bld_base->base.gallivm;
+	unsigned buf;
+	LLVMValueRef ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_RW_BUFFERS);
+
+	for (buf = 0; buf < SI_NUM_RW_BUFFERS; buf++) { /* XXX upper bound??? */
+		/* Load the resource descriptor */
+		si_shader_ctx->shader_buffers[buf] =
+			build_indexed_load_const(si_shader_ctx, ptr, lp_build_const_int32(gallivm, buf));
+	}
+}
+
 static void preload_constants(struct si_shader_context *si_shader_ctx)
 {
 	struct lp_build_tgsi_context * bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
@@ -4379,6 +4393,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	create_meta_data(&si_shader_ctx);
 	create_function(&si_shader_ctx);
+	preload_shader_buffers(&si_shader_ctx);
 	preload_constants(&si_shader_ctx);
 	preload_samplers(&si_shader_ctx);
 	preload_streamout_buffers(&si_shader_ctx);
