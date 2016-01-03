@@ -83,6 +83,7 @@ struct si_shader_context
 	LLVMTargetMachineRef tm;
 	LLVMValueRef const_md;
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
+	LLVMValueRef shader_buffers[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef lds;
 	LLVMValueRef *constants[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef sampler_views[SI_NUM_SAMPLER_VIEWS];
@@ -2333,6 +2334,98 @@ static void set_tex_fetch_args(struct gallivm_state *gallivm,
 	emit_data->arg_count = num_args;
 }
 
+/**
+ * Extracts the 48bit wide base pointer from a resource.
+ */
+static void fetch_res_base_ptr(
+	struct lp_build_tgsi_context * bld_base,
+	struct lp_build_emit_data *emit_data,
+	LLVMValueRef *base_ptr)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+
+	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
+	LLVMTypeRef i64 = LLVMIntTypeInContext(gallivm->context, 64);
+	LLVMTypeRef v4i32 = LLVMVectorType(i32, 4);
+	LLVMTypeRef v2i64 = LLVMVectorType(i64, 2);
+
+	/* N.B. LLVMValueRef is an expression, not a GPU pointer
+	 * it's an expression that returns the buffer descriptor
+	 * the expression is of type v16i8 and contains all SQ_BUF_RSRC_WORD* values
+	 *
+	 * The layout of individual constants in memory (buffer, image, or sampler)
+	 * is described in the register spec entries for
+	 * SQ_BUF_RSRC_WORD0-3, SQ_IMG_RSRC_WORD0-7, and SQ_IMG_SAMP_WORD0-3.
+	 */
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	unsigned sampler_src;
+	unsigned sampler_index;
+
+	sampler_src = inst->Instruction.NumSrcRegs - 1;
+	sampler_index = inst->Src[sampler_src].Register.Index;
+	printf("[DEBUG]:%s: sampler_{src,index}={%i,%i}\n", __func__, sampler_src, sampler_index);
+	LLVMValueRef res = si_shader_ctx->shader_buffers[sampler_index];
+	LLVMValueRef base, base0, base1 = NULL;
+
+	res = LLVMBuildBitCast(builder, res, v4i32, "");
+	base0 = LLVMBuildExtractElement(builder, res, bld_base->uint_bld.zero, "");
+	base1 = LLVMBuildExtractElement(builder, res, bld_base->uint_bld.one, "");
+	base1 = LLVMBuildAnd(builder, base1, lp_build_const_int32(gallivm, 0xFFFF), "");
+	base0 = LLVMBuildBitCast(builder, base0, v2i64, "");
+	base1 = LLVMBuildBitCast(builder, base1, v2i64, "");
+
+	base1 = LLVMBuildLShr(builder, base1, lp_build_const_int32(gallivm, 0x20), "");
+	base  = LLVMBuildOr(builder, base0, base1, "");
+	base  = LLVMConstInt(i64, (uintptr_t) base, 0);
+
+	*base_ptr = LLVMBuildIntToPtr(builder, base, LLVMPointerType(i64, 0), "");
+}
+
+static void load_fetch_args(
+	struct lp_build_tgsi_context * bld_base,
+	struct lp_build_emit_data * emit_data)
+{
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	const struct tgsi_full_src_register *reg = &inst->Src[0];
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	unsigned swizzle;
+
+	/* TGSI doc: LOAD dst, resource, address */
+
+	/* Address operand in x chan */
+	swizzle = tgsi_util_get_full_src_register_swizzle(reg, TGSI_CHAN_X);
+
+	/* Fetch GPU base pointer out of the resource descriptor */
+	LLVMValueRef base_ptr = NULL;
+	fetch_res_base_ptr(bld_base, emit_data, &base_ptr);
+
+	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
+
+	/* XXX - what to do with addr, offset into res??? */
+	//LLVMValueRef addr = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_X);
+	LLVMValueRef loadval = LLVMBuildAdd(builder, base_ptr,
+				lp_build_const_int32(gallivm, swizzle), "");
+
+	/* Resource(base_ptr) + addr */
+	emit_data->args[0] = loadval;
+
+	emit_data->arg_count = 1;
+}
+
+static void build_load_intrinsic(const struct lp_build_tgsi_action *action,
+				 struct lp_build_tgsi_context *bld_base,
+				 struct lp_build_emit_data *emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+
+	emit_data->output[emit_data->chan] =
+		LLVMBuildLoad(builder, emit_data->args[0], "");
+}
+
 static void atomic_fetch_args(
 	struct lp_build_tgsi_context * bld_base,
 	struct lp_build_emit_data * emit_data)
@@ -2346,7 +2439,7 @@ static void atomic_fetch_args(
 
 	// XXX
 	LLVMValueRef base_ptr = NULL;
-	fetch_res_base_ptr(bld_base, &base_ptr);
+	fetch_res_base_ptr(bld_base, emit_data, &base_ptr);
 
 	// XXX ??
 
@@ -3416,6 +3509,11 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 			LLVMNoUnwindAttribute);
 }
 
+static const struct lp_build_tgsi_action load_action = {
+	.fetch_args = load_fetch_args,
+	.emit = build_load_intrinsic,
+};
+
 static const struct lp_build_tgsi_action atomic_action = {
 	.fetch_args = atomic_fetch_args,
 	.emit = build_atomic_intrinsic,
@@ -4225,6 +4323,8 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	bld_base->op_actions[TGSI_OPCODE_ATOMUMAX] = atomic_action; // Atomic unsigned maximum
 	bld_base->op_actions[TGSI_OPCODE_ATOMIMIN] = atomic_action; // Atomic signed minimum
 	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX] = atomic_action; // Atomic signed maximum
+
+	bld_base->op_actions[TGSI_OPCODE_LOAD] = load_action;
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
