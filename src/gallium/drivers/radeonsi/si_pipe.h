@@ -78,6 +78,7 @@
 
 #define SI_MAX_VIEWPORTS	16
 #define SI_MAX_BORDER_COLORS	4096
+#define SI_MAX_SHADER_BUFFERS	8
 
 struct si_compute;
 
