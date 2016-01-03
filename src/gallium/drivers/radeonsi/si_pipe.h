@@ -78,6 +78,7 @@
 
 #define SI_MAX_VIEWPORTS	16
 #define SI_MAX_BORDER_COLORS	4096
+#define SI_MAX_SHADER_BUFFERS	8
 
 struct si_compute;
 
@@ -222,6 +223,7 @@ struct si_context {
 
 	/* shader descriptors */
 	struct si_descriptors		vertex_buffers;
+	struct si_buffer_resources	shader_buffers[SI_NUM_SHADERS]; // [SI_MAX_SHADER_BUFFERS];
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
 	struct si_buffer_resources	rw_buffers[SI_NUM_SHADERS];
 	struct si_textures_info		samplers[SI_NUM_SHADERS];
