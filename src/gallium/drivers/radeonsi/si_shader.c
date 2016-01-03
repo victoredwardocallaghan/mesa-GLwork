@@ -2333,6 +2333,91 @@ static void set_tex_fetch_args(struct gallivm_state *gallivm,
 	emit_data->arg_count = num_args;
 }
 
+static void atomic_fetch_args(
+	struct lp_build_tgsi_context * bld_base,
+	struct lp_build_emit_data * emit_data)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	unsigned opcode = inst->Instruction.Opcode;
+	unsigned target = inst->Texture.Texture;
+
+	// XXX
+	LLVMValueRef base_ptr = NULL;
+	fetch_res_base_ptr(bld_base, &base_ptr);
+
+	// XXX ??
+
+	/* int type large enough to hold a pointer */
+	// LLVMTypeRef int_type = LLVMIntTypeInContext(gallivm->context, 8 * sizeof(void *));
+	LLVMTypeRef i128 = LLVMIntTypeInContext(gallivm->context, 128);
+	LLVMTypeRef v2i128 = LLVMVectorType(i128, 2);
+	LLVMTypeRef i8 = LLVMInt8TypeInContext(gallivm->context);
+	LLVMTypeRef v16i8 = LLVMVectorType(i8, 16);
+
+	/* Bitcast and truncate v8i32 to v16i8. */
+	LLVMValueRef res = LLVMConstInt(i128, (uintptr_t) base_ptr, 0);
+	res = LLVMBuildIntToPtr(builder, res, LLVMPointerType(i128, 0), "cast int to ptr");
+
+	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
+	emit_data->args[0] = lp_build_const_int32(gallivm, res);
+	/* src0.x */
+	emit_data->args[1] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
+	//emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
+	emit_data->arg_count = 2; //3;
+}
+
+static void build_atomic_intrinsic(
+		const struct lp_build_tgsi_action * action,
+		struct lp_build_tgsi_context * bld_base,
+		struct lp_build_emit_data * emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMIntPredicate op;
+
+	switch (emit_data->info->opcode) {
+	default:
+		assert(0);
+	case TGSI_OPCODE_ATOMUADD:
+		op = LLVMAtomicRMWBinOpAdd;
+		break;
+	case TGSI_OPCODE_ATOMXCHG:
+		op = LLVMAtomicRMWBinOpXchg;
+		break;
+//	case TGSI_OPCODE_ATOMCAS:
+	case TGSI_OPCODE_ATOMAND:
+		op = LLVMAtomicRMWBinOpAnd;
+		break;
+	case TGSI_OPCODE_ATOMOR:
+		op = LLVMAtomicRMWBinOpOr;
+		break;
+	case TGSI_OPCODE_ATOMXOR:
+		op = LLVMAtomicRMWBinOpXor;
+		break;
+	case TGSI_OPCODE_ATOMUMIN:
+		op = LLVMAtomicRMWBinOpUMin;
+		break;
+	case TGSI_OPCODE_ATOMUMAX:
+		op = LLVMAtomicRMWBinOpUMax;
+		break;
+	case TGSI_OPCODE_ATOMIMIN:
+		op = LLVMAtomicRMWBinOpMin;
+		break;
+	case TGSI_OPCODE_ATOMIMAX:
+		op = LLVMAtomicRMWBinOpMax;
+		break;
+	}
+
+	emit_data->output[emit_data->chan] =
+		LLVMBuildAtomicRMW(builder, op,
+			emit_data->args[0], emit_data->args[1],
+			LLVMAtomicOrderingMonotonic, false);
+}
+
+
 static const struct lp_build_tgsi_action tex_action;
 
 static void tex_fetch_ptrs(
@@ -3331,6 +3416,11 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 			LLVMNoUnwindAttribute);
 }
 
+static const struct lp_build_tgsi_action atomic_action = {
+	.fetch_args = atomic_fetch_args,
+	.emit = build_atomic_intrinsic,
+};
+
 static const struct lp_build_tgsi_action tex_action = {
 	.fetch_args = tex_fetch_args,
 	.emit = build_tex_intrinsic,
@@ -4123,6 +4213,18 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	bld_base->op_actions[TGSI_OPCODE_TG4] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_LODQ] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXQS].emit = si_llvm_emit_txqs;
+
+	bld_base->op_actions[TGSI_OPCODE_ATOMUADD] = atomic_action;
+	bld_base->op_actions[TGSI_OPCODE_ATOMXCHG] = atomic_action; // Atomic exchange
+//	bld_base->op_actions[TGSI_OPCODE_ATOMCAS ] = atomic_action; // Atomic compare-and-exchange
+	bld_base->op_actions[TGSI_OPCODE_ATOMAND ] = atomic_action; // Atomic bitwise And
+	bld_base->op_actions[TGSI_OPCODE_ATOMOR  ] = atomic_action; // Atomic bitwise Or
+	bld_base->op_actions[TGSI_OPCODE_ATOMXOR ] = atomic_action; // Atomic bitwise Xor
+	bld_base->op_actions[TGSI_OPCODE_ATOMXOR ] = atomic_action; // Atomic bitwise Xor
+	bld_base->op_actions[TGSI_OPCODE_ATOMUMIN] = atomic_action; // Atomic unsigned minimum
+	bld_base->op_actions[TGSI_OPCODE_ATOMUMAX] = atomic_action; // Atomic unsigned maximum
+	bld_base->op_actions[TGSI_OPCODE_ATOMIMIN] = atomic_action; // Atomic signed minimum
+	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX] = atomic_action; // Atomic signed maximum
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
