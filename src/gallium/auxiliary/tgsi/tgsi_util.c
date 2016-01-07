@@ -52,7 +52,7 @@ tgsi_align_128bit(
 unsigned
 tgsi_util_get_src_register_swizzle(
    const struct tgsi_src_register *reg,
-   unsigned component )
+   enum tgsi_chan component)
 {
    switch (component) {
    case TGSI_CHAN_X:
@@ -73,30 +73,30 @@ tgsi_util_get_src_register_swizzle(
 unsigned
 tgsi_util_get_full_src_register_swizzle(
    const struct tgsi_full_src_register  *reg,
-   unsigned component )
+   enum tgsi_chan component)
 {
    return tgsi_util_get_src_register_swizzle(
       &reg->Register,
-      component );
+      component);
 }
 
 void
 tgsi_util_set_src_register_swizzle(
    struct tgsi_src_register *reg,
    unsigned swizzle,
-   unsigned component )
+   enum tgsi_chan component)
 {
-   switch( component ) {
-   case 0:
+   switch (component) {
+   case TGSI_CHAN_X:
       reg->SwizzleX = swizzle;
       break;
-   case 1:
+   case TGSI_CHAN_Y:
       reg->SwizzleY = swizzle;
       break;
-   case 2:
+   case TGSI_CHAN_Z:
       reg->SwizzleZ = swizzle;
       break;
-   case 3:
+   case TGSI_CHAN_W:
       reg->SwizzleW = swizzle;
       break;
    default:

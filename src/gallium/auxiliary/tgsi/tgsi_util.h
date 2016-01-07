@@ -43,7 +43,7 @@ tgsi_align_128bit(
 unsigned
 tgsi_util_get_src_register_swizzle(
    const struct tgsi_src_register *reg,
-   unsigned component );
+   enum tgsi_chan component);
 
 
 unsigned
