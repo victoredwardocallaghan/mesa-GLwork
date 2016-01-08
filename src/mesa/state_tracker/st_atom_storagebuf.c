@@ -45,7 +45,8 @@ st_bind_ssbos(struct st_context *st, struct gl_shader *shader,
               unsigned shader_type)
 {
    unsigned i;
-   struct pipe_shader_buffer sb = { 0 };
+   struct pipe_shader_buffer buffers[MAX_SHADER_STORAGE_BUFFERS];
+   struct gl_program_constants *c = &st->ctx->Const.Program[shader->Stage];
 
    if (!shader)
       return;
@@ -53,28 +54,37 @@ st_bind_ssbos(struct st_context *st, struct gl_shader *shader,
    for (i = 0; i < shader->NumShaderStorageBlocks; i++) {
       struct gl_shader_storage_buffer_binding *binding;
       struct st_buffer_object *st_obj;
+      struct pipe_shader_buffer *sb = &buffers[i];
 
       binding = &st->ctx->ShaderStorageBufferBindings[shader->ShaderStorageBlocks[i]->Binding];
       st_obj = st_buffer_object(binding->BufferObject);
 
-      sb.buffer = st_obj->buffer;
+      sb->buffer = st_obj->buffer;
 
-      if (sb.buffer) {
-         sb.buffer_offset = binding->Offset;
-         sb.buffer_size = sb.buffer->width0 - binding->Offset;
+      if (sb->buffer) {
+         sb->buffer_offset = binding->Offset;
+         sb->buffer_size = sb->buffer->width0 - binding->Offset;
 
          /* AutomaticSize is FALSE if the buffer was set with BindBufferRange.
           * Take the minimum just to be sure.
           */
          if (!binding->AutomaticSize)
-            sb.buffer_size = MIN2(sb.buffer_size, (unsigned) binding->Size);
+            sb->buffer_size = MIN2(sb->buffer_size, (unsigned) binding->Size);
       }
       else {
-         sb.buffer_offset = 0;
-         sb.buffer_size = 0;
+         sb->buffer_offset = 0;
+         sb->buffer_size = 0;
       }
-      st->pipe->set_shader_buffers(st->pipe, shader_type, 16/*XXX*/ + i, 1, &sb);
    }
+   st->pipe->set_shader_buffers(st->pipe, shader_type, c->MaxAtomicBuffers,
+                                shader->NumShaderStorageBlocks, buffers);
+   /* clear out any stale shader buffers */
+   if (shader->NumShaderStorageBlocks < c->MaxShaderStorageBlocks)
+      st->pipe->set_shader_buffers(
+            st->pipe, shader_type,
+            c->MaxAtomicBuffers + shader->NumShaderStorageBlocks,
+            c->MaxShaderStorageBlocks - shader->NumShaderStorageBlocks,
+            NULL);
 }
 
 static void bind_vs_ssbos(struct st_context *st)
