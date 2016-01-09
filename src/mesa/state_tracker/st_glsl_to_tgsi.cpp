@@ -39,6 +39,7 @@
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
 #include "main/shaderapi.h"
+#include "main/shaderimage.h"
 #include "program/prog_instruction.h"
 #include "program/sampler.h"
 
@@ -50,6 +51,7 @@
 #include "util/u_memory.h"
 #include "st_program.h"
 #include "st_mesa_to_tgsi.h"
+#include "st_format.h"
 
 
 #define PROGRAM_IMMEDIATE PROGRAM_FILE_MAX
@@ -264,6 +266,7 @@ public:
    int tex_target; /**< One of TEXTURE_*_INDEX */
    glsl_base_type tex_type;
    GLboolean tex_shadow;
+   unsigned image_format;
 
    st_src_reg tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
    unsigned tex_offset_num_offset;
@@ -397,6 +400,9 @@ public:
    glsl_base_type sampler_types[PIPE_MAX_SAMPLERS];
    int sampler_targets[PIPE_MAX_SAMPLERS];   /**< One of TGSI_TEXTURE_* */
    int buffers_used;
+   int images_used;
+   int image_targets[PIPE_MAX_SHADER_IMAGES];
+   unsigned image_formats[PIPE_MAX_SHADER_IMAGES];
    bool indirect_addr_consts;
    int wpos_transform_const;
 
@@ -3270,13 +3276,13 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
    exec_node *param = ir->actual_parameters.get_head();
 
    ir_dereference *img = (ir_dereference *)param;
-   const glsl_type *type =
-      img->variable_referenced()->type->without_array();
+   const ir_variable *imgvar = img->variable_referenced();
+   const glsl_type *type = imgvar->type->without_array();
 
    /* XXX use accept */
    st_src_reg image(
          PROGRAM_IMAGE,
-         img->variable_referenced()->data.location /*???*/,
+         imgvar->data.location /*???*/,
          GLSL_TYPE_UINT);
 
    st_dst_reg dst = undef_dst;
@@ -3284,17 +3290,21 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
       ir->return_deref->accept(this);
       dst = st_dst_reg(this->result);
       /* XXX doubles? */
-      dst.writemask = (1 << ir->return_deref->type->vector_elements) - 1;
+      dst.writemask = WRITEMASK_XYZW;
    }
 
    glsl_to_tgsi_instruction *inst;
 
    if (!strcmp("__intrinsic_image_size", callee)) {
+      dst.writemask = WRITEMASK_XYZ;
       inst = emit_asm(ir, TGSI_OPCODE_RESQ, dst);
    } else if (!strcmp("__intrinsic_image_samples", callee)) {
-      // RESQ
-      assert(!"todo");
-      return;
+      st_src_reg res = get_temp(glsl_type::ivec4_type);
+      st_dst_reg dstres = st_dst_reg(res);
+      dstres.writemask = WRITEMASK_W;
+      emit_asm(ir, TGSI_OPCODE_RESQ, dstres);
+      res.swizzle = SWIZZLE_WWWW;
+      inst = emit_asm(ir, TGSI_OPCODE_MOV, dst, res);
    } else {
       st_src_reg arg1 = undef_src, arg2 = undef_src;
       st_src_reg coord;
@@ -3361,6 +3371,41 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 
    inst->buffer = image;
    // xxx access
+   switch (type->sampler_dimensionality) {
+   case GLSL_SAMPLER_DIM_1D:
+      inst->tex_target = (type->sampler_array)
+         ? TEXTURE_1D_ARRAY_INDEX : TEXTURE_1D_INDEX;
+      break;
+   case GLSL_SAMPLER_DIM_2D:
+      inst->tex_target = (type->sampler_array)
+         ? TEXTURE_2D_ARRAY_INDEX : TEXTURE_2D_INDEX;
+      break;
+   case GLSL_SAMPLER_DIM_3D:
+      inst->tex_target = TEXTURE_3D_INDEX;
+      break;
+   case GLSL_SAMPLER_DIM_CUBE:
+      inst->tex_target = (type->sampler_array)
+         ? TEXTURE_CUBE_ARRAY_INDEX : TEXTURE_CUBE_INDEX;
+      break;
+   case GLSL_SAMPLER_DIM_RECT:
+      inst->tex_target = TEXTURE_RECT_INDEX;
+      break;
+   case GLSL_SAMPLER_DIM_BUF:
+      inst->tex_target = TEXTURE_BUFFER_INDEX;
+      break;
+   case GLSL_SAMPLER_DIM_EXTERNAL:
+      inst->tex_target = TEXTURE_EXTERNAL_INDEX;
+      break;
+   case GLSL_SAMPLER_DIM_MS:
+      inst->tex_target = (type->sampler_array)
+         ? TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX : TEXTURE_2D_MULTISAMPLE_INDEX;
+      break;
+   default:
+      assert(!"Should not get here.");
+   }
+
+   inst->image_format = st_mesa_format_to_pipe_format(st_context(ctx),
+         _mesa_get_shader_image_format(imgvar->data.image_format));
 }
 
 void
@@ -3917,6 +3962,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    num_address_regs = 0;
    samplers_used = 0;
    buffers_used = 0;
+   images_used = 0;
    indirect_addr_consts = false;
    wpos_transform_const = -1;
    glsl_version = 0;
@@ -3952,6 +3998,7 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
 {
    v->samplers_used = 0;
    v->buffers_used = 0;
+   v->images_used = 0;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &v->instructions) {
       if (inst->info->is_tex) {
@@ -3972,6 +4019,14 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
       if (is_resource_instruction(inst->op) || inst->op == TGSI_OPCODE_STORE) {
          if (inst->buffer.file == PROGRAM_BUFFER)
             v->buffers_used |= 1 << inst->buffer.index;
+         else {
+            unsigned idx = inst->buffer.index;
+            assert(inst->buffer.file == PROGRAM_IMAGE);
+            v->images_used |= 1 << idx;
+            v->image_targets[idx] =
+               st_translate_texture_target(inst->tex_target, false);
+            v->image_formats[idx] = inst->image_format;
+         }
       }
    }
    prog->SamplersUsed = v->samplers_used;
@@ -4751,6 +4806,7 @@ struct st_translate {
    struct ureg_dst address[3];
    struct ureg_src samplers[PIPE_MAX_SAMPLERS];
    struct ureg_src buffers[PIPE_MAX_SHADER_BUFFERS];
+   struct ureg_src images[PIPE_MAX_SHADER_IMAGES];
    struct ureg_src systemValues[SYSTEM_VALUE_MAX];
    struct tgsi_texture_offset tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
    unsigned *array_sizes;
@@ -5240,20 +5296,29 @@ compile_tgsi_instruction(struct st_translate *t,
       for (i = num_src - 1; i >= 0; i--)
          src[i + 1] = src[i];
       num_src++;
-      src[0] = t->buffers[inst->buffer.index];
+      if (inst->buffer.file == PROGRAM_BUFFER)
+         src[0] = t->buffers[inst->buffer.index];
+      else
+         src[0] = t->images[inst->buffer.index];
       if (inst->buffer.reladdr)
          src[0] = ureg_src_indirect(src[0], ureg_src(t->address[2]));
       assert(src[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src, inst->buffer_access);
       break;
 
-   case TGSI_OPCODE_STORE:
-      dst[0] = ureg_writemask(ureg_dst(t->buffers[inst->buffer.index]), inst->dst[0].writemask);
+   case TGSI_OPCODE_STORE: {
+      struct ureg_src tdst;
+      if (inst->buffer.file == PROGRAM_BUFFER)
+         tdst = t->buffers[inst->buffer.index];
+      else
+         tdst = t->images[inst->buffer.index];
+      dst[0] = ureg_writemask(ureg_dst(tdst), inst->dst[0].writemask);
       if (inst->buffer.reladdr)
          dst[0] = ureg_dst_indirect(dst[0], ureg_src(t->address[2]));
       assert(dst[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src, inst->buffer_access);
       break;
+   }
 
    case TGSI_OPCODE_SCS:
       dst[0] = ureg_writemask(dst[0], TGSI_WRITEMASK_XY);
@@ -5896,6 +5961,14 @@ st_translate_program(
       }
    }
 
+   for (i = 0; i < program->shader->NumImages; i++) {
+      if (program->images_used & (1 << i)) {
+         t->images[i] = ureg_DECL_image(ureg, i,
+                                        program->image_targets[i],
+                                        program->image_formats[i],
+                                        true, false);
+      }
+   }
 
 
    /* Emit each instruction in turn:
