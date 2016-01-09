@@ -3292,7 +3292,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
       ir->return_deref->accept(this);
       dst = st_dst_reg(this->result);
       /* XXX doubles? */
-      dst.writemask = WRITEMASK_XYZW;
+      dst.writemask = (1 << ir->return_deref->type->vector_elements) - 1;
    }
 
    glsl_to_tgsi_instruction *inst;
@@ -3369,6 +3369,8 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
       }
 
       inst = emit_asm(ir, opcode, dst, coord, arg1, arg2);
+      if (opcode == TGSI_OPCODE_STORE)
+         inst->dst[0].writemask = WRITEMASK_XYZW;
    }
 
    inst->buffer = image;
