@@ -3317,6 +3317,14 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
       param = param->get_next();
       ((ir_dereference *)param)->accept(this);
       emit_asm(ir, TGSI_OPCODE_MOV, coord_dst, this->result);
+      coord.swizzle = SWIZZLE_XXXX;
+      switch (type->coordinate_components()) {
+      case 4: assert(!"unexpected coord count");
+      /* fallthrough */
+      case 3: coord.swizzle |= SWIZZLE_Z << 6;
+      /* fallthrough */
+      case 2: coord.swizzle |= SWIZZLE_Y << 3;
+      }
 
       if (type->sampler_dimensionality == GLSL_SAMPLER_DIM_MS) {
          param = param->get_next();
@@ -3325,6 +3333,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
          sample.swizzle = SWIZZLE_XXXX;
          coord_dst.writemask = WRITEMASK_W;
          emit_asm(ir, TGSI_OPCODE_MOV, coord_dst, sample);
+         coord.swizzle |= SWIZZLE_W << 9;
       }
 
       param = param->get_next();
