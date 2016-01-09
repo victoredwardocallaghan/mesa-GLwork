@@ -2204,7 +2204,8 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
       ir_constant *const_offset = ir->operands[0]->as_constant();
       st_src_reg buffer(
             PROGRAM_UNDEFINED,
-            16/*XXX*/ + (const_offset ? const_offset->value.u[0] : 0),
+            ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
+            (const_offset ? const_offset->value.u[0] : 0),
             GLSL_TYPE_UINT);
       if (!const_offset) {
          buffer.reladdr = ralloc(mem_ctx, st_src_reg);
@@ -3181,7 +3182,10 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
 
    /* XXX use accept */
    st_src_reg buffer(
-         PROGRAM_UNDEFINED, 16/*XXX*/ + const_block->value.u[0], GLSL_TYPE_UINT);
+         PROGRAM_UNDEFINED,
+         ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
+         const_block->value.u[0],
+         GLSL_TYPE_UINT);
 
    /* Calculate the surface offset */
    offset->accept(this);
