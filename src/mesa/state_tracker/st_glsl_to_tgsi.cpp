@@ -3279,7 +3279,6 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
 
    if (!strcmp("__intrinsic_load_ssbo", callee) ||
        !strcmp("__intrinsic_store_ssbo", callee) ||
-       !strcmp("__intrinsic_store_ssbo", callee) ||
        !strcmp("__intrinsic_atomic_add", callee) ||
        !strcmp("__intrinsic_atomic_min", callee) ||
        !strcmp("__intrinsic_atomic_max", callee) ||
