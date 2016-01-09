@@ -88,6 +88,11 @@ extern const struct st_tracked_state st_bind_vs_ssbos;
 extern const struct st_tracked_state st_bind_gs_ssbos;
 extern const struct st_tracked_state st_bind_tcs_ssbos;
 extern const struct st_tracked_state st_bind_tes_ssbos;
+extern const struct st_tracked_state st_bind_fs_images;
+extern const struct st_tracked_state st_bind_vs_images;
+extern const struct st_tracked_state st_bind_gs_images;
+extern const struct st_tracked_state st_bind_tcs_images;
+extern const struct st_tracked_state st_bind_tes_images;
 extern const struct st_tracked_state st_update_pixel_transfer;
 extern const struct st_tracked_state st_update_tess;
 
