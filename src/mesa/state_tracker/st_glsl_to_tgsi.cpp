@@ -53,6 +53,8 @@
 
 
 #define PROGRAM_IMMEDIATE PROGRAM_FILE_MAX
+#define PROGRAM_BUFFER    (PROGRAM_FILE_MAX + 1)
+#define PROGRAM_IMAGE     (PROGRAM_FILE_MAX + 2)
 #define PROGRAM_ANY_CONST ((1 << PROGRAM_STATE_VAR) |    \
                            (1 << PROGRAM_CONSTANT) |     \
                            (1 << PROGRAM_UNIFORM))
@@ -69,7 +71,7 @@ static int swizzle_for_size(int size);
  */
 class st_src_reg {
 public:
-   st_src_reg(gl_register_file file, int index, const glsl_type *type)
+   st_src_reg(int file, int index, const glsl_type *type)
    {
       this->file = file;
       this->index = index;
@@ -88,7 +90,7 @@ public:
       this->is_double_vertex_input = false;
    }
 
-   st_src_reg(gl_register_file file, int index, int type)
+   st_src_reg(int file, int index, int type)
    {
       this->type = type;
       this->file = file;
@@ -104,7 +106,7 @@ public:
       this->is_double_vertex_input = false;
    }
 
-   st_src_reg(gl_register_file file, int index, int type, int index2D)
+   st_src_reg(int file, int index, int type, int index2D)
    {
       this->type = type;
       this->file = file;
@@ -138,7 +140,7 @@ public:
 
    explicit st_src_reg(st_dst_reg reg);
 
-   gl_register_file file; /**< PROGRAM_* from Mesa */
+   int file; /**< PROGRAM_* from Mesa */
    int index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
    int index2D;
    GLuint swizzle; /**< SWIZZLE_XYZWONEZERO swizzles from Mesa. */
@@ -203,7 +205,7 @@ public:
 
    explicit st_dst_reg(st_src_reg reg);
 
-   gl_register_file file; /**< PROGRAM_* from Mesa */
+   int file; /**< PROGRAM_* from Mesa */
    int index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
    int index2D;
    int writemask; /**< Bitfield of WRITEMASK_[XYZW] */
@@ -276,14 +278,14 @@ public:
 
 class variable_storage : public exec_node {
 public:
-   variable_storage(ir_variable *var, gl_register_file file, int index,
+   variable_storage(ir_variable *var, int file, int index,
                     unsigned array_id = 0)
       : file(file), index(index), var(var), array_id(array_id)
    {
       /* empty */
    }
 
-   gl_register_file file;
+   int file;
    int index;
    ir_variable *var; /* variable that maps to this, if any */
    unsigned array_id;
@@ -405,7 +407,7 @@ public:
 
    variable_storage *find_variable_storage(ir_variable *var);
 
-   int add_constant(gl_register_file file, gl_constant_value values[8],
+   int add_constant(int file, gl_constant_value values[8],
                     int size, int datatype, GLuint *swizzle_out);
 
    function_entry *get_function_signature(ir_function_signature *sig);
@@ -1024,7 +1026,7 @@ glsl_to_tgsi_visitor::emit_arl(ir_instruction *ir,
 }
 
 int
-glsl_to_tgsi_visitor::add_constant(gl_register_file file,
+glsl_to_tgsi_visitor::add_constant(int file,
                                    gl_constant_value values[8], int size, int datatype,
                                    GLuint *swizzle_out)
 {
@@ -2207,7 +2209,7 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
    case ir_unop_get_buffer_size: {
       ir_constant *const_offset = ir->operands[0]->as_constant();
       st_src_reg buffer(
-            PROGRAM_UNDEFINED,
+            PROGRAM_BUFFER,
             ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
             (const_offset ? const_offset->value.u[0] : 0),
             GLSL_TYPE_UINT);
@@ -3130,7 +3132,7 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
    ir_variable *location = deref->variable_referenced();
 
    st_src_reg buffer(
-         PROGRAM_UNDEFINED, location->data.binding, GLSL_TYPE_ATOMIC_UINT);
+         PROGRAM_BUFFER, location->data.binding, GLSL_TYPE_ATOMIC_UINT);
 
    /* Calculate the surface offset */
    st_src_reg offset;
@@ -3186,7 +3188,7 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
 
    /* XXX use accept */
    st_src_reg buffer(
-         PROGRAM_UNDEFINED,
+         PROGRAM_BUFFER,
          ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
          const_block->value.u[0],
          GLSL_TYPE_UINT);
@@ -3273,7 +3275,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 
    /* XXX use accept */
    st_src_reg image(
-         PROGRAM_UNDEFINED,
+         PROGRAM_IMAGE,
          img->variable_referenced()->data.location /*???*/,
          GLSL_TYPE_UINT);
 
@@ -3968,8 +3970,8 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
          }
       }
       if (is_resource_instruction(inst->op) || inst->op == TGSI_OPCODE_STORE) {
-         /* TODO: figure out if it's a buffer or image */
-         v->buffers_used |= 1 << inst->buffer.index;
+         if (inst->buffer.file == PROGRAM_BUFFER)
+            v->buffers_used |= 1 << inst->buffer.index;
       }
    }
    prog->SamplersUsed = v->samplers_used;
@@ -4889,7 +4891,7 @@ emit_immediate(struct st_translate *t,
  * Map a glsl_to_tgsi dst register to a TGSI ureg_dst register.
  */
 static struct ureg_dst
-dst_register(struct st_translate *t, gl_register_file file, unsigned index,
+dst_register(struct st_translate *t, int file, unsigned index,
              unsigned array_id)
 {
    unsigned array;
