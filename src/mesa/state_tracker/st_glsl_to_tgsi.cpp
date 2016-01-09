@@ -921,6 +921,9 @@ glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
       case3fid(FLR, FLR, DFLR);
       case3fid(ROUND, ROUND, DROUND);
 
+      case2iu(ATOMIMAX, ATOMUMAX);
+      case2iu(ATOMIMIN, ATOMUMIN);
+
       default: break;
    }
 
@@ -3216,7 +3219,39 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
       assert(write_mask);
       inst->dst[0].writemask = write_mask->value.u[0];
    } else {
-      assert(0);
+      param = param->get_next();
+      ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
+      val->accept(this);
+
+      st_src_reg data = this->result, data2 = undef_src;
+      unsigned opcode;
+      if (!strcmp("__intrinsic_atomic_add", callee))
+         opcode = TGSI_OPCODE_ATOMUADD;
+      else if (!strcmp("__intrinsic_atomic_min", callee))
+         opcode = TGSI_OPCODE_ATOMIMIN;
+      else if (!strcmp("__intrinsic_atomic_max", callee))
+         opcode = TGSI_OPCODE_ATOMIMAX;
+      else if (!strcmp("__intrinsic_atomic_and", callee))
+         opcode = TGSI_OPCODE_ATOMAND;
+      else if (!strcmp("__intrinsic_atomic_or", callee))
+         opcode = TGSI_OPCODE_ATOMOR;
+      else if (!strcmp("__intrinsic_atomic_xor", callee))
+         opcode = TGSI_OPCODE_ATOMXOR;
+      else if (!strcmp("__intrinsic_atomic_exchange", callee))
+         opcode = TGSI_OPCODE_ATOMXCHG;
+      else if (!strcmp("__intrinsic_atomic_comp_swap", callee)) {
+         opcode = TGSI_OPCODE_ATOMCAS;
+         param = param->get_next();
+         val = ((ir_instruction *)param)->as_rvalue();
+         val->accept(this);
+         data2 = this->result;
+      } else {
+         assert(!"Unexpected intrinsic");
+         return;
+      }
+
+      inst = emit_asm(ir, opcode, dst, off, data, data2);
+      inst->buffer = buffer;
    }
 
    param = param->get_next();
@@ -3243,7 +3278,16 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
    }
 
    if (!strcmp("__intrinsic_load_ssbo", callee) ||
-       !strcmp("__intrinsic_store_ssbo", callee)) {
+       !strcmp("__intrinsic_store_ssbo", callee) ||
+       !strcmp("__intrinsic_store_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_add", callee) ||
+       !strcmp("__intrinsic_atomic_min", callee) ||
+       !strcmp("__intrinsic_atomic_max", callee) ||
+       !strcmp("__intrinsic_atomic_and", callee) ||
+       !strcmp("__intrinsic_atomic_or", callee) ||
+       !strcmp("__intrinsic_atomic_xor", callee) ||
+       !strcmp("__intrinsic_atomic_exchange", callee) ||
+       !strcmp("__intrinsic_atomic_comp_swap", callee)) {
       visit_ssbo_intrinsic(ir);
       return;
    }
