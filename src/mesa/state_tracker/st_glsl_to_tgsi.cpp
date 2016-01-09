@@ -450,6 +450,7 @@ public:
 
    void visit_atomic_counter_intrinsic(ir_call *);
    void visit_ssbo_intrinsic(ir_call *);
+   void visit_image_intrinsic(ir_call *);
 
    st_src_reg result;
 
@@ -3261,6 +3262,106 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
 }
 
 void
+glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
+{
+   const char *callee = ir->callee->function_name();
+   exec_node *param = ir->actual_parameters.get_head();
+
+   ir_dereference *img = (ir_dereference *)param;
+   const glsl_type *type =
+      img->variable_referenced()->type->without_array();
+
+   /* XXX use accept */
+   st_src_reg image(
+         PROGRAM_UNDEFINED,
+         img->variable_referenced()->data.location /*???*/,
+         GLSL_TYPE_UINT);
+
+   st_dst_reg dst = undef_dst;
+   if (ir->return_deref) {
+      ir->return_deref->accept(this);
+      dst = st_dst_reg(this->result);
+      /* XXX doubles? */
+      dst.writemask = (1 << ir->return_deref->type->vector_elements) - 1;
+   }
+
+   glsl_to_tgsi_instruction *inst;
+
+   if (!strcmp("__intrinsic_image_size", callee)) {
+      inst = emit_asm(ir, TGSI_OPCODE_RESQ, dst);
+   } else if (!strcmp("__intrinsic_image_samples", callee)) {
+      // RESQ
+      assert(!"todo");
+      return;
+   } else {
+      st_src_reg arg1 = undef_src, arg2 = undef_src;
+      st_src_reg coord;
+      st_dst_reg coord_dst;
+      coord = get_temp(glsl_type::ivec4_type);
+      coord_dst = st_dst_reg(coord);
+      coord_dst.writemask = (1 << type->coordinate_components()) - 1;
+      param = param->get_next();
+      ((ir_dereference *)param)->accept(this);
+      emit_asm(ir, TGSI_OPCODE_MOV, coord_dst, this->result);
+
+      if (type->sampler_dimensionality == GLSL_SAMPLER_DIM_MS) {
+         param = param->get_next();
+         ((ir_dereference *)param)->accept(this);
+         st_src_reg sample = this->result;
+         sample.swizzle = SWIZZLE_XXXX;
+         coord_dst.writemask = WRITEMASK_W;
+         emit_asm(ir, TGSI_OPCODE_MOV, coord_dst, sample);
+      }
+
+      param = param->get_next();
+      if (!param->is_tail_sentinel()) {
+         ((ir_dereference *)param)->accept(this);
+         arg1 = this->result;
+         param = param->get_next();
+      }
+
+      if (!param->is_tail_sentinel()) {
+         ((ir_dereference *)param)->accept(this);
+         arg2 = this->result;
+         param = param->get_next();
+      }
+
+      assert(param->is_tail_sentinel());
+
+      unsigned opcode;
+      if (!strcmp("__intrinsic_image_load", callee))
+         opcode = TGSI_OPCODE_LOAD;
+      else if (!strcmp("__intrinsic_image_store", callee))
+         opcode = TGSI_OPCODE_STORE;
+      else if (!strcmp("__intrinsic_image_atomic_add", callee))
+         opcode = TGSI_OPCODE_ATOMUADD;
+      else if (!strcmp("__intrinsic_image_atomic_min", callee))
+         opcode = TGSI_OPCODE_ATOMIMIN;
+      else if (!strcmp("__intrinsic_image_atomic_max", callee))
+         opcode = TGSI_OPCODE_ATOMIMAX;
+      else if (!strcmp("__intrinsic_image_atomic_and", callee))
+         opcode = TGSI_OPCODE_ATOMAND;
+      else if (!strcmp("__intrinsic_image_atomic_or", callee))
+         opcode = TGSI_OPCODE_ATOMOR;
+      else if (!strcmp("__intrinsic_image_atomic_xor", callee))
+         opcode = TGSI_OPCODE_ATOMXOR;
+      else if (!strcmp("__intrinsic_image_atomic_exchange", callee))
+         opcode = TGSI_OPCODE_ATOMXCHG;
+      else if (!strcmp("__intrinsic_image_atomic_comp_swap", callee))
+         opcode = TGSI_OPCODE_ATOMCAS;
+      else {
+         assert(!"Unexpected intrinsic");
+         return;
+      }
+
+      inst = emit_asm(ir, opcode, dst, coord, arg1, arg2);
+   }
+
+   inst->buffer = image;
+   // xxx access
+}
+
+void
 glsl_to_tgsi_visitor::visit(ir_call *ir)
 {
    glsl_to_tgsi_instruction *call_inst;
@@ -3288,6 +3389,22 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
        !strcmp("__intrinsic_atomic_exchange", callee) ||
        !strcmp("__intrinsic_atomic_comp_swap", callee)) {
       visit_ssbo_intrinsic(ir);
+      return;
+   }
+
+   if (!strcmp("__intrinsic_image_load", callee) ||
+       !strcmp("__intrinsic_image_store", callee) ||
+       !strcmp("__intrinsic_image_atomic_add", callee) ||
+       !strcmp("__intrinsic_image_atomic_min", callee) ||
+       !strcmp("__intrinsic_image_atomic_max", callee) ||
+       !strcmp("__intrinsic_image_atomic_and", callee) ||
+       !strcmp("__intrinsic_image_atomic_or", callee) ||
+       !strcmp("__intrinsic_image_atomic_xor", callee) ||
+       !strcmp("__intrinsic_image_atomic_exchange", callee) ||
+       !strcmp("__intrinsic_image_atomic_comp_swap", callee) ||
+       !strcmp("__intrinsic_image_size", callee) ||
+       !strcmp("__intrinsic_image_samples", callee)) {
+      visit_image_intrinsic(ir);
       return;
    }
 
