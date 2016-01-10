@@ -2427,6 +2427,19 @@ static void build_load_intrinsic(const struct lp_build_tgsi_action *action,
 }
 
 
+static void store_fetch_args(
+	struct lp_build_tgsi_context * bld_base,
+	struct lp_build_emit_data * emit_data)
+{
+}
+
+static void build_store_intrinsic(const struct lp_build_tgsi_action *action,
+				  struct lp_build_tgsi_context *bld_base,
+				  struct lp_build_emit_data *emit_data)
+{
+}
+
+
 static void atomic_fetch_args(
 	struct lp_build_tgsi_context * bld_base,
 	struct lp_build_emit_data * emit_data)
@@ -3497,6 +3510,12 @@ static const struct lp_build_tgsi_action load_action = {
 	.emit = build_load_intrinsic,
 };
 
+static const struct lp_build_tgsi_action store_action = {
+	.fetch_args = store_fetch_args,
+	.emit = build_store_intrinsic,
+};
+
+
 static const struct lp_build_tgsi_action atomic_action = {
 	.fetch_args = atomic_fetch_args,
 	.emit = build_atomic_intrinsic,
@@ -4308,6 +4327,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX] = atomic_action; // Atomic signed maximum
 
 	bld_base->op_actions[TGSI_OPCODE_LOAD] = load_action;
+	bld_base->op_actions[TGSI_OPCODE_STORE] = store_action;
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
