@@ -2426,40 +2426,23 @@ static void build_load_intrinsic(const struct lp_build_tgsi_action *action,
 		LLVMBuildLoad(builder, emit_data->args[0], "");
 }
 
+
 static void atomic_fetch_args(
 	struct lp_build_tgsi_context * bld_base,
 	struct lp_build_emit_data * emit_data)
 {
-	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
-	unsigned opcode = inst->Instruction.Opcode;
-	unsigned target = inst->Texture.Texture;
 
-	// XXX
+	/* Fetch GPU base pointer out of the resource descriptor */
 	LLVMValueRef base_ptr = NULL;
 	fetch_res_base_ptr(bld_base, emit_data, &base_ptr);
 
-	// XXX ??
-
-	/* int type large enough to hold a pointer */
-	// LLVMTypeRef int_type = LLVMIntTypeInContext(gallivm->context, 8 * sizeof(void *));
-	LLVMTypeRef i128 = LLVMIntTypeInContext(gallivm->context, 128);
-	LLVMTypeRef v2i128 = LLVMVectorType(i128, 2);
-	LLVMTypeRef i8 = LLVMInt8TypeInContext(gallivm->context);
-	LLVMTypeRef v16i8 = LLVMVectorType(i8, 16);
-
-	/* Bitcast and truncate v8i32 to v16i8. */
-	LLVMValueRef res = LLVMConstInt(i128, (uintptr_t) base_ptr, 0);
-	res = LLVMBuildIntToPtr(builder, res, LLVMPointerType(i128, 0), "cast int to ptr");
-
 	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
-	emit_data->args[0] = lp_build_const_int32(gallivm, res);
+
+	emit_data->args[0] = base_ptr;
 	/* src0.x */
-	emit_data->args[1] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
-	//emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
-	emit_data->arg_count = 2; //3;
+	emit_data->args[1] = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_X);
+	emit_data->arg_count = 2;
 }
 
 static void build_atomic_intrinsic(
