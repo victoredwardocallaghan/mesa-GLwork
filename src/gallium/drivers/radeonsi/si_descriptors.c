@@ -611,6 +611,34 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 	}
 }
 
+
+/* SHADER IMAGES */
+
+static void si_set_shader_images(struct pipe_context *pipe,
+				 unsigned shader, unsigned start_slot,
+				 unsigned count, struct pipe_image_view *views)
+{
+	const unsigned end_slot = start_slot + count;
+	unsigned slot;
+
+	assert(shader_type < SI_NUM_SHADERS);
+
+	printf("%s: ----->TODO\n", __func__);
+	for (slot = start_slot; slot < end_slot; ++slot) {
+		printf("%s: slot=%i\n", __func__, slot); // XXX ???
+	}
+	printf("%s: <-----TODO\n", __func__);
+/**
+ * Images are specified using the ``set_shader_images`` method. When binding
+ * images, the ``level``, ``first_layer`` and ``last_layer`` pipe_image_view
+ * fields specify the mipmap level and the range of layers the image will be
+ * constrained to.
+ */
+// unsigned mipmap_level = views->u.tex.level;
+// unsigned layers = views->u.tex.last_layer - views->u.tex.first_layer + 1;
+}
+
+
 /* RING BUFFERS */
 
 void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
@@ -1104,6 +1132,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	/* Set pipe_context functions. */
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
+	sctx->b.b.set_shader_images = si_set_shader_images;
 	sctx->b.b.set_shader_buffers  = si_set_shader_buffers;
 	sctx->b.b.set_constant_buffer = si_set_constant_buffer;
 	sctx->b.b.set_sampler_views = si_set_sampler_views;
