@@ -775,8 +775,10 @@ void st_init_extensions(struct pipe_screen *screen,
    glsl_feature_level = screen->get_param(screen, PIPE_CAP_GLSL_FEATURE_LEVEL);
 
    consts->GLSLVersion = glsl_feature_level;
+/*
    if (glsl_feature_level >= 410)
       consts->GLSLVersion = 410;
+*/
 
    _mesa_override_glsl_version(consts);
 
