@@ -2440,6 +2440,29 @@ static void build_store_intrinsic(const struct lp_build_tgsi_action *action,
 }
 
 
+static void resq_fetch_args(
+	struct lp_build_tgsi_context * bld_base,
+	struct lp_build_emit_data * emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	const struct tgsi_full_src_register *reg = &inst->Src[0];
+	unsigned fileindex = reg->Register.Index;
+
+	assert( (reg->Register.File == TGSI_FILE_BUFFER) ||
+		(reg->Register.File == TGSI_FILE_IMAGE ) );
+
+	emit_data->args[0] = lp_build_const_int32(gallivm, fileindex);
+	emit_data->arg_count = 1;
+}
+
+static void build_resq_intrinsic(const struct lp_build_tgsi_action *action,
+				 struct lp_build_tgsi_context *bld_base,
+				 struct lp_build_emit_data *emit_data)
+{
+}
+
+
 static void atomic_fetch_args(
 	struct lp_build_tgsi_context * bld_base,
 	struct lp_build_emit_data * emit_data)
@@ -3515,6 +3538,11 @@ static const struct lp_build_tgsi_action store_action = {
 	.emit = build_store_intrinsic,
 };
 
+static const struct lp_build_tgsi_action surf_query_action = {
+	.fetch_args = resq_fetch_args,
+	.emit = build_resq_intrinsic,
+};
+
 
 static const struct lp_build_tgsi_action atomic_action = {
 	.fetch_args = atomic_fetch_args,
@@ -4328,6 +4356,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	bld_base->op_actions[TGSI_OPCODE_LOAD] = load_action;
 	bld_base->op_actions[TGSI_OPCODE_STORE] = store_action;
+	bld_base->op_actions[TGSI_OPCODE_RESQ]  = surf_query_action; // ZZZ
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
