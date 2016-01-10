@@ -608,6 +608,16 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 	}
 }
 
+static void si_set_shader_images(struct pipe_context *pipe,
+				 unsigned shader, unsigned start_slot,
+				 unsigned count, struct pipe_image_view *views)
+{
+	printf("%s: ----->TODO\n", __func__);
+	printf("%s: shader=%i start_slot=%i count=%i\n", __func__, shader, start_slot, count);
+	printf("%s: <-----TODO\n", __func__);
+}
+
+
 /* RING BUFFERS */
 
 void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
@@ -1122,6 +1132,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	/* Set pipe_context functions. */
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
+	sctx->b.b.set_shader_images = si_set_shader_images;
 	sctx->b.b.set_shader_buffers  = si_set_shader_buffers;
 	sctx->b.b.set_constant_buffer = si_set_constant_buffer;
 	sctx->b.b.set_sampler_views = si_set_sampler_views;
