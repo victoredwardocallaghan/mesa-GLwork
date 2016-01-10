@@ -522,7 +522,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
 		return SI_MAX_SHADER_BUFFERS;
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
-		return 0;
+		return shader == PIPE_SHADER_FRAGMENT ? 8 : 32;
 	}
 	return 0;
 }
