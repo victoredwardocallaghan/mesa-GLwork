@@ -125,6 +125,7 @@ void lower_ubo_reference(struct gl_shader *shader);
 void lower_packed_varyings(void *mem_ctx,
                            unsigned locations_used, ir_variable_mode mode,
                            unsigned gs_input_vertices, gl_shader *shader,
+                           unsigned base_location,
                            bool disable_varying_packing, bool xfb_enabled,
                            bool has_enhanced_layouts);
 bool lower_vector_insert(exec_list *instructions, bool lower_nonconstant_index);

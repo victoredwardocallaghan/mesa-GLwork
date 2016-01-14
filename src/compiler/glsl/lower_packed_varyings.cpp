@@ -169,6 +169,7 @@ public:
                                  unsigned gs_input_vertices,
                                  exec_list *out_instructions,
                                  exec_list *out_variables,
+                                 unsigned base_location,
                                  bool disable_varying_packing,
                                  bool xfb_enabled,
                                  bool has_enhanced_layouts);
@@ -198,11 +199,13 @@ private:
     */
    void * const mem_ctx;
 
+   const unsigned base_location;
+
    /**
     * Number of generic varying slots which are used by this shader.  This is
     * used to allocate temporary intermediate data structures.  If any varying
     * used by this shader has a location greater than or equal to
-    * VARYING_SLOT_VAR0 + locations_used, an assertion will fire.
+    * base_location + locations_used, an assertion will fire.
     */
    const unsigned locations_used;
 
@@ -238,8 +241,8 @@ private:
    exec_list *out_variables;
 
    bool disable_varying_packing;
-   bool has_enhanced_layouts;
    bool xfb_enabled;
+   bool has_enhanced_layouts;
 };
 
 } /* anonymous namespace */
@@ -247,9 +250,11 @@ private:
 lower_packed_varyings_visitor::lower_packed_varyings_visitor(
       void *mem_ctx, unsigned locations_used, ir_variable_mode mode,
       unsigned gs_input_vertices, exec_list *out_instructions,
-      exec_list *out_variables, bool disable_varying_packing,
-      bool xfb_enabled, bool has_enhanced_layouts)
+      exec_list *out_variables, unsigned base_location,
+      bool disable_varying_packing, bool xfb_enabled,
+      bool has_enhanced_layouts)
    : mem_ctx(mem_ctx),
+     base_location(base_location),
      locations_used(locations_used),
      packed_varyings((ir_variable **)
                      rzalloc_array_size(mem_ctx, sizeof(*packed_varyings),
@@ -273,7 +278,7 @@ lower_packed_varyings_visitor::run(struct gl_shader *shader)
          continue;
 
       if (var->data.mode != this->mode ||
-          var->data.location < VARYING_SLOT_VAR0 ||
+          var->data.location < (int) this->base_location ||
           !this->needs_lowering(var))
          continue;
 
@@ -597,7 +602,6 @@ lower_packed_varyings_visitor::lower_arraylike(ir_rvalue *rvalue,
       } else {
          char *subscripted_name
             = ralloc_asprintf(this->mem_ctx, "%s[%d]", name, i);
-
          fine_location =
             this->lower_rvalue(dereference_array, fine_location,
                                unpacked_var, subscripted_name,
@@ -624,7 +628,7 @@ lower_packed_varyings_visitor::get_packed_varying_deref(
       unsigned location, ir_variable *unpacked_var, const char *name,
       unsigned vertex_index)
 {
-   unsigned slot = location - VARYING_SLOT_VAR0;
+   unsigned slot = location - this->base_location;
    assert(slot < locations_used);
    if (this->packed_varyings[slot] == NULL) {
       char *packed_name = ralloc_asprintf(this->mem_ctx, "packed:%s", name);
@@ -755,8 +759,9 @@ lower_packed_varyings_gs_splicer::visit_leave(ir_emit_vertex *ev)
 void
 lower_packed_varyings(void *mem_ctx, unsigned locations_used,
                       ir_variable_mode mode, unsigned gs_input_vertices,
-                      gl_shader *shader, bool disable_varying_packing,
-                      bool xfb_enabled, bool has_enhanced_layouts)
+                      gl_shader *shader, unsigned base_location,
+                      bool disable_varying_packing, bool xfb_enabled,
+                      bool has_enhanced_layouts)
 {
    ir_function *main_func = shader->symbols->get_function("main");
    exec_list void_parameters;
@@ -768,11 +773,11 @@ lower_packed_varyings(void *mem_ctx, unsigned locations_used,
           mode == ir_var_shader_in))) {
       exec_list *instructions = shader->ir;
       exec_list new_instructions, new_variables;
-
       lower_packed_varyings_visitor visitor(mem_ctx, locations_used, mode,
                                             gs_input_vertices,
                                             &new_instructions,
                                             &new_variables,
+                                            base_location,
                                             disable_varying_packing,
                                             xfb_enabled,
                                             has_enhanced_layouts);

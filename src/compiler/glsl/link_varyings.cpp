@@ -1886,7 +1886,8 @@ canonicalize_shader_io(exec_list *ir, enum ir_variable_mode io_mode)
  * In theory a 32 bits value will be enough but a 64 bits value is future proof.
  */
 uint64_t
-reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
+reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode,
+                      int base_location)
 {
    assert(io_mode == ir_var_shader_in || io_mode == ir_var_shader_out);
    assert(MAX_VARYING <= 64); /* avoid an overflow of the returned value */
@@ -1902,10 +1903,10 @@ reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
 
       if (var == NULL || var->data.mode != io_mode ||
           !var->data.explicit_location ||
-          var->data.location < VARYING_SLOT_VAR0)
+          var->data.location < base_location)
          continue;
 
-      var_slot = var->data.location - VARYING_SLOT_VAR0;
+      var_slot = var->data.location - base_location;
 
       unsigned num_elements = get_varying_type(var, stage->Stage)
          ->count_attribute_slots(stage->Stage == MESA_SHADER_VERTEX);
@@ -2127,8 +2128,8 @@ assign_varying_locations(struct gl_context *ctx,
    }
 
    const uint64_t reserved_slots =
-      reserved_varying_slot(producer, ir_var_shader_out) |
-      reserved_varying_slot(consumer, ir_var_shader_in);
+      reserved_varying_slot(producer, ir_var_shader_out, VARYING_SLOT_VAR0) |
+      reserved_varying_slot(consumer, ir_var_shader_in, VARYING_SLOT_VAR0);
 
    /* Add varyings with explicit locations to varyings with implicit locations
     * to get the total number of slots used.
@@ -2201,14 +2202,32 @@ assign_varying_locations(struct gl_context *ctx,
    }
 
    if (producer) {
+      if (producer->Stage == MESA_SHADER_VERTEX) {
+         /* Since we only pack vertex inputs with an explicit location we only
+          * need to count those inputs.
+          */
+         const uint64_t reserved_slots =
+            reserved_varying_slot(producer, ir_var_shader_in,
+                                  VERT_ATTRIB_GENERIC0);
+
+         /* Pack vertex inputs with the component layout qualifier */
+         unsigned vertex_attributes = _mesa_bitcount_64(reserved_slots);
+         if (vertex_attributes > 0)
+            lower_packed_varyings(mem_ctx, vertex_attributes,
+                                  ir_var_shader_in, 0, producer,
+                                  VERT_ATTRIB_GENERIC0, true, xfb_enabled,
+                                  ctx->API == API_OPENGL_CORE);
+      }
+
       lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
-                            0, producer, disable_varying_packing,
-                            xfb_enabled, ctx->API == API_OPENGL_CORE);
+                            0, producer, VARYING_SLOT_VAR0,
+                            disable_varying_packing, xfb_enabled,
+                            ctx->API == API_OPENGL_CORE);
    }
 
    if (consumer) {
       lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
-                            consumer_vertices, consumer,
+                            consumer_vertices, consumer, VARYING_SLOT_VAR0,
                             disable_varying_packing, xfb_enabled,
                             ctx->API == API_OPENGL_CORE);
    }
