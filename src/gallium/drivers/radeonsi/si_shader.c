@@ -4326,6 +4326,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	bld_base->op_actions[TGSI_OPCODE_EMIT].emit = si_llvm_emit_vertex;
 	bld_base->op_actions[TGSI_OPCODE_ENDPRIM].emit = si_llvm_emit_primitive;
 	bld_base->op_actions[TGSI_OPCODE_BARRIER].emit = si_llvm_emit_barrier;
+	bld_base->op_actions[TGSI_OPCODE_MEMBAR].emit = si_llvm_emit_barrier;
 
 	if (HAVE_LLVM >= 0x0306) {
 		bld_base->op_actions[TGSI_OPCODE_MAX].emit = build_tgsi_intrinsic_nomem;
