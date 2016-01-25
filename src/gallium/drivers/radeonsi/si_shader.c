@@ -2450,7 +2450,7 @@ static void set_tex_fetch_args(struct gallivm_state *gallivm,
 	emit_data->args[1] = res_ptr;
 	num_args = 2;
 
-	if (opcode == TGSI_OPCODE_TXF || opcode == TGSI_OPCODE_TXQ)
+	if (opcode == TGSI_OPCODE_TXF || opcode == TGSI_OPCODE_TXQ || opcode == TGSI_OPCODE_RESQ)
 		emit_data->dst_type = LLVMVectorType(i32, 4);
 	else {
 		emit_data->dst_type = LLVMVectorType(
@@ -2540,7 +2540,7 @@ static void tex_fetch_args(
 
 	tex_fetch_ptrs(bld_base, emit_data, &res_ptr, &samp_ptr, &fmask_ptr);
 
-	if (opcode == TGSI_OPCODE_TXQ) {
+	if (opcode == TGSI_OPCODE_TXQ || opcode == TGSI_OPCODE_RESQ) {
 		if (target == TGSI_TEXTURE_BUFFER) {
 			LLVMTypeRef v8i32 = LLVMVectorType(i32, 8);
 
@@ -2892,7 +2892,8 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
 	const char *name = "llvm.SI.image.sample";
 	const char *infix = "";
 
-	if (opcode == TGSI_OPCODE_TXQ && target == TGSI_TEXTURE_BUFFER) {
+	if (target == TGSI_TEXTURE_BUFFER &&
+	   (opcode == TGSI_OPCODE_TXQ || opcode == TGSI_OPCODE_RESQ)) {
 		/* Just return the buffer size. */
 		emit_data->output[emit_data->chan] = emit_data->args[0];
 		return;
@@ -2917,6 +2918,11 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
 		has_offset = false;
 		break;
 	case TGSI_OPCODE_TXQ:
+		name = "llvm.SI.getresinfo";
+		is_shadow = false;
+		has_offset = false;
+		break;
+	case TGSI_OPCODE_RESQ:
 		name = "llvm.SI.getresinfo";
 		is_shadow = false;
 		has_offset = false;
@@ -4310,6 +4316,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	bld_base->op_actions[TGSI_OPCODE_TG4] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_LODQ] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXQS].emit = si_llvm_emit_txqs;
+	bld_base->op_actions[TGSI_OPCODE_RESQ] = tex_action;
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
