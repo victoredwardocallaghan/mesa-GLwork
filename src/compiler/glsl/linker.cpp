@@ -2914,6 +2914,15 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
 
       if (var->data.explicit_location &&
           var->data.location >= VARYING_SLOT_VAR0) {
+
+         /* FIXME: We could also match per patch outputs too rather than just
+          * skipping over them here.
+          */
+         if (var->data.patch) {
+            var->data.is_unmatched_generic_inout = 0;
+            continue;
+         }
+
          const unsigned idx = var->data.location - VARYING_SLOT_VAR0;
          if (explicit_locations[idx][var->data.location_frac] == NULL)
             explicit_locations[idx][var->data.location_frac] = var;
@@ -2930,6 +2939,15 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
       ir_variable *output = NULL;
       if (input->data.explicit_location
           && input->data.location >= VARYING_SLOT_VAR0) {
+
+         /* FIXME: We could also match per patch outputs too rather than just
+          * skipping over them here.
+          */
+         if (input->data.patch) {
+            input->data.is_unmatched_generic_inout = 0;
+            continue;
+         }
+
          output = explicit_locations[input->data.location - VARYING_SLOT_VAR0]
             [input->data.location_frac];
 
