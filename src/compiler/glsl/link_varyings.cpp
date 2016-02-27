@@ -1891,14 +1891,19 @@ canonicalize_shader_io(exec_list *ir, enum ir_variable_mode io_mode)
 /**
  * Generate a bitfield map of the explicit locations for shader varyings.
  *
- * In theory a 32 bits value will be enough but a 64 bits value is future proof.
+ * Note: For Tessellation shaders we are sitting right on the limits of the
+ * 64 bit map. Per-vertex and per-patch both have separate location domains
+ * with a max of MAX_VARYING.
  */
 uint64_t
 reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode,
                       int base_location)
 {
    assert(io_mode == ir_var_shader_in || io_mode == ir_var_shader_out);
-   assert(MAX_VARYING <= 64); /* avoid an overflow of the returned value */
+   /* Avoid an overflow of the returned value, we multiple by two to handle
+    * handle Tessellation shaders.
+    */
+   assert(MAX_VARYING * 2 <= 64);
 
    uint64_t slots = 0;
    int var_slot;
@@ -1919,7 +1924,7 @@ reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode,
       unsigned num_elements = get_varying_type(var, stage->Stage)
          ->count_attribute_slots(stage->Stage == MESA_SHADER_VERTEX);
       for (unsigned i = 0; i < num_elements; i++) {
-         if (var_slot >= 0 && var_slot < MAX_VARYING)
+         if (var_slot >= 0 && var_slot < MAX_VARYING * 2)
             slots |= UINT64_C(1) << var_slot;
          var_slot += 1;
       }
