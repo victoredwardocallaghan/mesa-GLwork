@@ -357,8 +357,12 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
    foreach_in_list(ir_instruction, node, producer->ir) {
       ir_variable *const var = node->as_variable();
 
-      if ((var == NULL) || (var->data.mode != ir_var_shader_out))
-	 continue;
+      /* FIXME: We should also validate per patch outputs too rather than just
+       * skipping over them here.
+       */
+      if ((var == NULL) || var->data.patch ||
+          (var->data.mode != ir_var_shader_out))
+         continue;
 
       if (!var->data.explicit_location
           || var->data.location < VARYING_SLOT_VAR0)
@@ -441,8 +445,12 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
    foreach_in_list(ir_instruction, node, consumer->ir) {
       ir_variable *const input = node->as_variable();
 
-      if ((input == NULL) || (input->data.mode != ir_var_shader_in))
-	 continue;
+      /* FIXME: We should also validate per patch outputs too rather than just
+       * skipping over them here.
+       */
+      if ((input == NULL) || input->data.patch ||
+          (input->data.mode != ir_var_shader_in))
+         continue;
 
       if (strcmp(input->name, "gl_Color") == 0 && input->data.used) {
          const ir_variable *const front_color =
