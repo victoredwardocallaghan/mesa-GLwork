@@ -152,6 +152,31 @@
 
 using namespace ir_builder;
 
+/**
+ * If the var is an array check if it matches the array attributes of the
+ * packed var.
+ */
+static bool
+check_for_matching_arrays(ir_variable *packed_var, ir_variable *var)
+{
+   const glsl_type *pt = packed_var->type;
+   const glsl_type *vt = var->type;
+   bool array_match = true;
+
+   while (pt->is_array() || vt->is_array()) {
+      if (pt->is_array() != vt->is_array() ||
+          pt->length != vt->length) {
+         array_match = false;
+         break;
+      } else {
+         pt = pt->fields.array;
+         vt = vt->fields.array;
+      }
+   }
+
+   return array_match;
+}
+
 static bool
 needs_lowering(ir_variable *var, bool has_enhanced_layouts,
                bool disable_varying_packing)
