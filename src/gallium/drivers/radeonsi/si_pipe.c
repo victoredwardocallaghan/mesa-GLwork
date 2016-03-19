@@ -461,7 +461,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 			return PIPE_SHADER_IR_NATIVE;
 
 		case PIPE_SHADER_CAP_SUPPORTED_IRS:
-			return 0;
+			return (PIPE_SHADER_IR_TGSI | PIPE_SHADER_IR_LLVM);
 
 		case PIPE_SHADER_CAP_DOUBLES:
 			return HAVE_LLVM >= 0x0307;
