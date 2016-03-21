@@ -242,8 +242,7 @@ _mesa_ast_array_index_to_hir(void *mem_ctx,
                       && !state->EXT_gpu_shader5_enable
                       && !state->OES_gpu_shader5_enable) ||
                      (array->variable_referenced()->data.mode == ir_var_shader_storage
-                      && !state->is_version(400, 0)
-                      && !state->ARB_gpu_shader5_enable))) {
+                      && state->es_shader))) {
          /* Page 50 in section 4.3.9 of the OpenGL ES 3.10 spec says:
           *
           *     "All indices used to index a uniform or shader storage block
@@ -251,6 +250,13 @@ _mesa_ast_array_index_to_hir(void *mem_ctx,
           *
           * But OES_gpu_shader5 (and ESSL 3.20) relax this to allow indexing
           * on uniform blocks but not shader storage blocks.
+          *
+          * This restriction never applies to shader storage blocks in OpenGL,
+          * because the ARB_shader_storage_buffer_object spec says:
+          *
+          *     "A uniform or shader storage block array can only be indexed
+          *     with a dynamically uniform integral expression, otherwise
+          *     results are undefined."
           *
           */
 	 _mesa_glsl_error(&loc, state, "%s block array index must be constant",
