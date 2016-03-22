@@ -318,11 +318,42 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 	return true;
 }
 
+static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
+					      struct r600_query *rquery,
+					      boolean wait,
+					      enum pipe_query_value_type result_type,
+					      int index, struct pipe_resource *resource,
+					      unsigned offset)
+{
+	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
+	struct r600_query_buffer *qbuf;
+	unsigned stride;
+
+	//assert(!query->ops || !query->ops->get_result);
+
+	if (index == -1)
+		return;
+
+	switch (query->b.type) {
+	case PIPE_QUERY_SO_STATISTICS:
+		stride = 2;
+		break;
+	case PIPE_QUERY_PIPELINE_STATISTICS:
+		stride = 12;
+		break;
+	default:
+		assert(index == 0);
+		stride = 1;
+		break;
+	}
+}
+
 static struct r600_query_ops query_hw_ops = {
 	.destroy = r600_query_hw_destroy,
 	.begin = r600_query_hw_begin,
 	.end = r600_query_hw_end,
 	.get_result = r600_query_hw_get_result,
+	.get_query_result_resource = r600_query_hw_get_result_resource,
 };
 
 static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
