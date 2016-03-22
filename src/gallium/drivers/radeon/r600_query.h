@@ -76,6 +76,11 @@ struct r600_query_ops {
 	boolean (*get_result)(struct r600_common_context *,
 			      struct r600_query *, boolean wait,
 			      union pipe_query_result *result);
+	void (*get_query_result_resource)(struct r600_common_context *,
+			      struct r600_query *, boolean wait,
+			      enum pipe_query_value_type result_type,
+			      int index, struct pipe_resource *resource,
+			      unsigned offset);
 };
 
 struct r600_query {
