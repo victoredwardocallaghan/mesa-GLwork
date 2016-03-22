@@ -915,6 +915,24 @@ static void r600_query_hw_add_result(struct r600_common_context *ctx,
 	}
 }
 
+static void r600_get_query_result_resource(struct pipe_context *ctx,
+					   struct pipe_query *query, boolean wait,
+					   enum pipe_query_value_type result_type,
+					   int index, struct pipe_resource *resource,
+					   unsigned offset)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct r600_query *rquery = (struct r600_query *)query;
+
+	if (!rquery->ops->get_query_result_resource) {
+	   assert(!"Unexpected lack of get_query_result_resource");
+	   return;
+	}
+
+	rquery->ops->get_query_result_resource(rctx, rquery, wait, result_type,
+					       index, resource, offset);
+}
+
 static boolean r600_get_query_result(struct pipe_context *ctx,
 				     struct pipe_query *query, boolean wait,
 				     union pipe_query_result *result)
@@ -1257,6 +1275,7 @@ void r600_query_init(struct r600_common_context *rctx)
 	rctx->b.begin_query = r600_begin_query;
 	rctx->b.end_query = r600_end_query;
 	rctx->b.get_query_result = r600_get_query_result;
+	rctx->b.get_query_result_resource = r600_get_query_result_resource;
 	rctx->render_cond_atom.emit = r600_emit_query_predication;
 
 	if (((struct r600_common_screen*)rctx->b.screen)->info.num_render_backends > 0)
