@@ -42,6 +42,7 @@ enum tgsi_chan {
    TGSI_CHAN_Y,
    TGSI_CHAN_Z,
    TGSI_CHAN_W,
+   TGSI_CHAN_ALL,
 };
 
 #define TGSI_NUM_CHANNELS 4  /* R,G,B,A */
