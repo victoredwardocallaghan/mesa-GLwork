@@ -416,7 +416,7 @@ lp_build_emit_fetch_texoffset(
    struct lp_build_tgsi_context *bld_base,
    const struct tgsi_full_instruction *inst,
    unsigned tex_off_op,
-   const unsigned chan_index)
+   const enum tgsi_chan chan_index)
 {
    const struct tgsi_texture_offset *off = &inst->TexOffsets[tex_off_op];
    struct tgsi_full_src_register reg;

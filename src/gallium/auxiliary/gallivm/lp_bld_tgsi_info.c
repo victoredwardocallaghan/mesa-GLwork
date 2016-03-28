@@ -61,7 +61,7 @@ static void
 analyse_src(struct analysis_context *ctx,
             struct lp_tgsi_channel_info *chan_info,
             const struct tgsi_src_register *src,
-            unsigned chan)
+            enum tgsi_chan chan)
 {
    chan_info->file = TGSI_FILE_NULL;
    if (!src->Indirect && !src->Absolute && !src->Negate) {
@@ -169,7 +169,7 @@ analyse_tex(struct analysis_context *ctx,
          tex_info->texture_unit = inst->Src[1].Register.Index;
       }
 
-      for (chan = 0; chan < 4; ++chan) {
+      for (chan = 0; chan < TGSI_CHAN_ALL; ++chan) {
          struct lp_tgsi_channel_info *chan_info = &tex_info->coord[chan];
          if (readmask & (1 << chan)) {
             analyse_src(ctx, chan_info, &inst->Src[0].Register, chan);
@@ -254,7 +254,7 @@ analyse_sample(struct analysis_context *ctx,
          indirect = TRUE;
       }
 
-      for (chan = 0; chan < 4; ++chan) {
+      for (chan = 0; chan < TGSI_CHAN_ALL; ++chan) {
          struct lp_tgsi_channel_info *chan_info = &tex_info->coord[chan];
          if (readmask & (1 << chan)) {
             analyse_src(ctx, chan_info, &inst->Src[0].Register, chan);
@@ -385,13 +385,13 @@ analyse_instruction(struct analysis_context *ctx,
           * Update this destination register value.
           */
 
-         struct lp_tgsi_channel_info res[4];
+         struct lp_tgsi_channel_info res[TGSI_CHAN_ALL];
 
          memset(res, 0, sizeof res);
 
          if (!inst->Instruction.Predicate &&
              !inst->Instruction.Saturate) {
-            for (chan = 0; chan < 4; ++chan) {
+            for (chan = 0; chan < TGSI_CHAN_ALL; ++chan) {
                if (dst->WriteMask & (1 << chan)) {
                   if (inst->Instruction.Opcode == TGSI_OPCODE_MOV) {
                      analyse_src(ctx, &res[chan],
@@ -421,7 +421,7 @@ analyse_instruction(struct analysis_context *ctx,
             }
          }
 
-         for (chan = 0; chan < 4; ++chan) {
+         for (chan = 0; chan < TGSI_CHAN_ALL; ++chan) {
             if (dst->WriteMask & (1 << chan)) {
                regs[dst->Index][chan] = res[chan];
             }

@@ -660,7 +660,7 @@ lp_build_emit_fetch_texoffset(
    struct lp_build_tgsi_context *bld_base,
    const struct tgsi_full_instruction *inst,
    unsigned tex_off_op,
-   const unsigned chan_index);
+   const enum tgsi_chan chan_index);
 
 boolean
 lp_build_tgsi_llvm(
