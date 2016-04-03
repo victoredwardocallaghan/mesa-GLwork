@@ -331,9 +331,9 @@ The integer capabilities:
   primitive on a layer is obtained from ``PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS``
   even though it can be larger than the number of layers supported by either
   rendering or textures.
-* ``PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR``: Indicates whether
-  ARB_robust_buffer_access_behavior is supported.
-
+* ``PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR``: Implementation uses bounds
+  checking on resource accesses by shader if the context is create with
+  PIPE_CONTEXT_ROBUST_BUFFER_ACCESS.
 
 .. _pipe_capf:
 
