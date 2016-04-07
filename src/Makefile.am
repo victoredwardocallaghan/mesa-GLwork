@@ -21,6 +21,9 @@
 
 SUBDIRS = . gtest util mapi/glapi/gen mapi
 
+# ..
+SUBDIRS += util/coccinelle
+
 # include only conditionally ?
 SUBDIRS += compiler
 

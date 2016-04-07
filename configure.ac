@@ -2648,6 +2648,7 @@ AC_CONFIG_FILES([Makefile
 		src/mesa/drivers/x11/Makefile
 		src/mesa/main/tests/Makefile
 		src/util/Makefile
+		src/util/coccinelle/Makefile
 		src/util/tests/hash_table/Makefile])
 
 AC_OUTPUT
@@ -2782,3 +2783,15 @@ echo "        PYTHON2:         $PYTHON2"
 echo ""
 echo "        Run '${MAKE-make}' to build Mesa"
 echo ""
+
+# ..
+AC_PATH_PROG(HAVE_COCCINELLE_CONFIG, spatch, "no")
+if test "$HAVE_COCCINELLE_CONFIG" = "no"; then
+echo
+echo "   Warning! spatch not found, you will not be  "
+echo "   able to run code checking with coccinelle "
+echo "   get it from http://coccinelle.lip6.fr       "
+echo "   or install from your distribution           "
+echo
+fi
+AM_CONDITIONAL([HAVE_COCCINELLE], [test "$HAVE_COCCINELLE_CONFIG" != "no"])
