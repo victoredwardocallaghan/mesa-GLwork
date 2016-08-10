@@ -729,6 +729,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->multisample_enable = state->multisample;
 	rs->force_persample_interp = state->force_persample_interp;
 	rs->clip_plane_enable = state->clip_plane_enable;
+	rs->cull_distance_enable = 0x0;
 	rs->line_stipple_enable = state->line_stipple_enable;
 	rs->poly_stipple_enable = state->poly_stipple_enable;
 	rs->line_smooth = state->line_smooth;

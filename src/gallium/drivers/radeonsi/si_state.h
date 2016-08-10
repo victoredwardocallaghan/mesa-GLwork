@@ -69,6 +69,7 @@ struct si_state_rasterizer {
 	unsigned		pa_sc_line_stipple;
 	unsigned		pa_cl_clip_cntl;
 	unsigned		clip_plane_enable;
+	unsigned		cull_distance_enable;
 	bool			poly_stipple_enable;
 	bool			line_smooth;
 	bool			poly_smooth;
